@@ -12,6 +12,11 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Try the demo journey' }));
     expect(screen.getAllByText(/invented demo data/i).length).toBeGreaterThan(0);
+    // The story flow is the first view: one chapter-by-chapter scroll.
+    expect(screen.getByText('Your listening, as one story')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Play story/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Journey' }));
     expect(screen.getByRole('img', { name: /Monthly listening minutes/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Spectrum' }));
