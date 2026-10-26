@@ -5,6 +5,7 @@ import type { View } from './data/types';
 import { useAppStore } from './state/store';
 import { ArtistsView, TracksView } from './ui/ListsView';
 import { GenresView } from './ui/GenresView';
+import { FlowView } from './ui/FlowView';
 import { GuideView } from './ui/GuideView';
 import { JourneyView } from './ui/JourneyView';
 import { MapView } from './ui/MapView';
@@ -23,6 +24,7 @@ const RANGES = [
 ];
 
 const TABS: Array<[View, string]> = [
+  ['flow', 'The story'],
   ['journey', 'Journey'],
   ['story', 'Story'],
   ['map', 'World'],
@@ -35,6 +37,11 @@ const TABS: Array<[View, string]> = [
 
 /** One honest line per view - editorial headers instead of filler cards. */
 const VIEW_HEADS: Partial<Record<View, { title: string; blurb: string }>> = {
+  flow: {
+    title: 'Your listening, as one story',
+    blurb:
+      'Scroll through the years: who led, who came back, and the quiet stretches - all counted from your plays.',
+  },
   journey: {
     title: 'Your listening, month by month',
     blurb: 'Minutes over time, who led each month, and the eras between them.',
@@ -215,6 +222,7 @@ export default function App() {
                   <p>{VIEW_HEADS[view]!.blurb}</p>
                 </header>
               )}
+              {view === 'flow' && <FlowView aggs={aggregates} />}
               {view === 'journey' && <JourneyView months={months} aggs={aggregates} />}
               {view === 'story' && <StoryView months={months} aggs={aggregates} />}
               {view === 'map' && <MapView months={months} aggs={aggregates} />}
