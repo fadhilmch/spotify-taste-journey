@@ -85,7 +85,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loading: false,
   loadProgress: null,
   error: null,
-  view: 'journey',
+  view: 'flow',
   range: 'all',
   month: null,
   playing: false,
