@@ -1126,4 +1126,211 @@
       transition-duration: 0.01ms !important;
     }
   }
+  /* Story flow: a sticky stage that morphs while chapters scroll past. */
+  .tj-flow {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .tj-flow-left {
+    position: sticky;
+    top: 16px;
+    /* Leave room for the fixed player bar so the stage is never covered. */
+    max-height: calc(100vh - 110px);
+    overflow: hidden;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px 18px 12px;
+  }
+  .tj-flow-kicker {
+    margin: 0;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--txt-2);
+  }
+  .tj-flow-big {
+    margin: 4px 0 6px;
+    font-size: clamp(30px, 6vw, 46px);
+    font-weight: 800;
+    line-height: 1.05;
+    color: var(--green-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .tj-flow-big small {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--txt-2);
+  }
+  .tj-flow-chart {
+    width: 100%;
+    height: auto;
+    max-height: calc(100vh - 330px);
+    min-height: 140px;
+    display: block;
+  }
+  .tj-flow-band {
+    fill: rgb(30 215 96 / 0.12);
+  }
+  .tj-flow-bar {
+    fill: var(--line);
+  }
+  .tj-flow-bar-partial {
+    fill: var(--panel-2);
+    stroke: var(--line);
+    stroke-dasharray: 3 3;
+  }
+  .tj-flow-ax {
+    fill: var(--txt-2);
+    font-size: 12px;
+  }
+  .tj-flow-line {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .tj-flow-dot {
+    transition: r 0.5s ease;
+  }
+  .tj-flow-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--txt-2);
+    min-height: 18px;
+  }
+  .tj-flow-legend i {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  .tj-flow-rail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+  .tj-flow-pip {
+    all: unset;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 28px;
+    padding: 0 8px;
+    border-radius: 14px;
+    font-size: 11px;
+    color: var(--txt-2);
+    transition:
+      background 0.3s ease,
+      color 0.3s ease;
+  }
+  .tj-flow-pip:focus-visible {
+    outline: 2px solid var(--green-soft);
+  }
+  .tj-flow-pipdot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--line);
+    transition:
+      background 0.3s ease,
+      transform 0.3s ease;
+  }
+  .tj-flow-pip.on {
+    color: var(--txt);
+    background: rgb(30 215 96 / 0.14);
+  }
+  .tj-flow-pip.on .tj-flow-pipdot {
+    background: var(--green-soft);
+    transform: scale(1.5);
+  }
+  .tj-flow-play {
+    margin-left: auto;
+  }
+  .tj-flow-chapters {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .tj-flow-chapter {
+    min-height: 62vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 16px 4px;
+    opacity: 0.38;
+    transform: translateY(8px);
+    transition:
+      opacity 0.6s ease,
+      transform 0.6s ease;
+  }
+  .tj-flow-chapter.on {
+    opacity: 1;
+    transform: none;
+  }
+  .tj-flow-chapter h3 {
+    margin: 0 0 8px;
+    font-size: 22px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .tj-flow-chapter p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--txt-2);
+  }
+  .tj-flow-end {
+    padding: 8px 0 40vh;
+  }
+  @media (max-width: 860px) {
+    .tj-flow {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+    }
+    .tj-flow-left {
+      top: 0;
+      z-index: 2;
+      padding: 10px 12px 6px;
+      border-radius: 0 0 16px 16px;
+    }
+    .tj-flow-big {
+      font-size: 28px;
+      margin: 2px 0;
+    }
+    .tj-flow-chart {
+      max-height: 26vh;
+      min-height: 110px;
+    }
+    .tj-flow-pip {
+      display: none;
+    }
+    .tj-flow-rail {
+      margin-top: 4px;
+      padding-top: 4px;
+    }
+    .tj-flow-play {
+      margin-left: 0;
+    }
+    .tj-flow-ax {
+      font-size: 17px;
+    }
+    .tj-flow-chapter {
+      min-height: 40vh;
+    }
+    .tj-flow-end {
+      padding-bottom: 30vh;
+    }
+  }
 }
