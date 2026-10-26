@@ -10,7 +10,7 @@ describe('App', () => {
     render(<App />);
     expect(screen.getByText(/Your listening, turned into a journey/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getByRole('button', { name: 'Try the demo journey' }));
     expect(screen.getAllByText(/invented demo data/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('img', { name: /Monthly listening minutes/i })).toBeInTheDocument();
 
@@ -37,7 +37,7 @@ describe('App', () => {
     useAppStore.getState().reset();
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getByRole('button', { name: 'Try the demo journey' }));
 
     await user.click(screen.getByRole('button', { name: 'Story' }));
     expect(screen.getByText('Your story in chapters')).toBeInTheDocument();

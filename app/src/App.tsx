@@ -108,7 +108,7 @@ export default function App() {
         </div>
 
         <div className="tj-main">
-          <SourceBar />
+          {(source !== null || view === 'guide') && <SourceBar />}
 
           {loading && (
             <LoadingState

@@ -477,13 +477,52 @@
     background: none;
     border: 0;
     padding: 0;
-    color: var(--txt-2);
-    font-size: 12.5px;
+    color: var(--txt);
+    font-size: 13px;
     cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: var(--line);
+    text-underline-offset: 4px;
   }
   .tj-guidelink:hover {
     color: var(--green);
-    text-decoration: underline;
+    text-decoration-color: var(--green);
+  }
+  .tj-onboard-views {
+    width: 100%;
+    margin-top: 36px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+  .tj-onboard-views-label {
+    margin: 0 0 12px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--txt-2);
+  }
+  .tj-onboard-views ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px 28px;
+  }
+  .tj-onboard-views li {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .tj-onboard-views b {
+    color: var(--txt);
+    font-size: 13.5px;
+  }
+  .tj-onboard-views span {
+    color: var(--txt-2);
+    font-size: 12.5px;
+    line-height: 1.5;
   }
   .tj-spinner {
     width: 28px;

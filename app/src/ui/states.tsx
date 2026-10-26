@@ -63,6 +63,24 @@ export function Onboarding() {
       <button type="button" className="tj-guidelink" onClick={() => setView('guide')}>
         How to get your Spotify export
       </button>
+      <div className="tj-onboard-views">
+        <p className="tj-onboard-views-label">What you will see</p>
+        <ul>
+          {ONBOARD_VIEWS.map(([name, line]) => (
+            <li key={name}>
+              <b>{name}</b>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
+
+const ONBOARD_VIEWS: Array<[string, string]> = [
+  ['Journey', 'Minutes month by month, who led each month, and the eras between.'],
+  ['Story', 'Your eras, discoveries, sessions and habits as chapters.'],
+  ['World', 'Where the artists you play come from, on the map.'],
+  ['Spectrum', 'Your genre mix and how it moves over time.'],
+];
