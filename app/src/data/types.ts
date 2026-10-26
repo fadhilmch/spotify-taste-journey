@@ -111,7 +111,7 @@ export interface ArtistGenre {
   origin?: ArtistOrigin;
 }
 
-export type View = 'journey' | 'story' | 'map' | 'genres' | 'artists' | 'tracks' | 'share' | 'guide';
+export type View = 'flow' | 'journey' | 'story' | 'map' | 'genres' | 'artists' | 'tracks' | 'share' | 'guide';
 
 export interface Coverage {
   matched: number;
