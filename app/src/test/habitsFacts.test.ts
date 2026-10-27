@@ -60,6 +60,7 @@ describe('artistFacts', () => {
     const f = artistFacts(aggs, 'X')!;
     expect(f).toMatchObject({ minutes: 40, firstMonth: '2019-01', lastMonth: '2020-05', peakYear: '2019' });
     expect(f.peakYearMinutes).toBe(30);
+    expect(f.ledYears).toEqual(['2019', '2020']);
     expect(f.monthly.map((m) => m.month)).toEqual(['2019-01', '2019-02', '2020-05']);
   });
   it('returns null for an unknown artist', () => {
