@@ -283,9 +283,9 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
     return () => obs.disconnect();
   }, [story, extras]);
 
-  const goTo = React.useCallback((i: number) => {
+  const goTo = React.useCallback((i: number, instant = false) => {
     sections.current[i]?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      behavior: instant || prefersReducedMotion() ? 'auto' : 'smooth',
       block: 'center',
     });
   }, []);
@@ -309,13 +309,15 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
     if (!story || !storyFocus) return;
     const i = story.beats.findIndex((b) => b.artists.includes(storyFocus));
     setStoryFocus(null);
-    if (i >= 0) setTimeout(() => goTo(i), 50);
+    if (i >= 0) setTimeout(() => goTo(i, true), 50);
   }, [story, storyFocus, goTo, setStoryFocus]);
 
   React.useEffect(() => {
     if (!story || !artistChapter) return;
     const i = extras.findIndex((b) => b.kind === 'artist');
-    if (i >= 0) setTimeout(() => goTo(nStory + i), 80);
+    if (i < 0) return;
+    const t = setTimeout(() => goTo(nStory + i, true), 80);
+    return () => clearTimeout(t);
   }, [story, artistChapter, extras, nStory, goTo]);
 
   if (!story) return null;
