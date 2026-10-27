@@ -45,6 +45,8 @@ interface AppState {
   startMatching: () => Promise<void>;
   setView: (v: View) => void;
   /** Artist the story should scroll to when it opens. */
+  libraryArtist: string | null;
+  setLibraryArtist: (a: string | null) => void;
   storyFocus: string | null;
   setStoryFocus: (a: string | null) => void;
   setRange: (r: string) => void;
@@ -89,6 +91,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadProgress: null,
   error: null,
   view: 'flow',
+  libraryArtist: null,
   storyFocus: null,
   range: 'all',
   month: null,
@@ -223,6 +226,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setView: (view) => set({ view }),
+  setLibraryArtist: (libraryArtist) => set({ libraryArtist }),
   setStoryFocus: (storyFocus) => set({ storyFocus }),
   setRange: (range) => set({ range }),
   setMonth: (month) => set({ month }),
