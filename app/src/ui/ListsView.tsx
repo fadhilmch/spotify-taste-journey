@@ -9,6 +9,7 @@ import { Button, Card, CardAside } from './primitives';
 
 function ArtistPanel({ aggs, artist }: { aggs: PlayAggregate[]; artist: string }) {
   const setView = useAppStore((s) => s.setView);
+  const setArtistChapter = useAppStore((s) => s.setArtistChapter);
   const setStoryFocus = useAppStore((s) => s.setStoryFocus);
   const facts = React.useMemo(() => artistFacts(aggs, artist), [aggs, artist]);
   const story = React.useMemo(() => buildNarrative(aggs), [aggs]);
@@ -28,6 +29,12 @@ function ArtistPanel({ aggs, artist }: { aggs: PlayAggregate[]; artist: string }
       <h3>{artist}</h3>
       <ul className="tj-artist-facts">
         <li>{facts.minutes.toLocaleString('en-US')} minutes played in total</li>
+        {facts.ledYears.length > 0 && (
+          <li>
+            Played most of anyone in {facts.ledYears[0]}
+            {facts.ledYears.length > 1 ? ` and ${facts.ledYears.length - 1} more year(s)` : ''}
+          </li>
+        )}
         <li>
           First heard {facts.firstMonth}, last heard {facts.lastMonth}
         </li>
@@ -47,6 +54,15 @@ function ArtistPanel({ aggs, artist }: { aggs: PlayAggregate[]; artist: string }
       {chapters.length > 0 && (
         <p className="tj-note">In the story: {chapters.map((b) => b.title).join('; ')}</p>
       )}
+      <Button
+        variant="ghost"
+        onClick={() => {
+          setArtistChapter(artist);
+          setView('flow');
+        }}
+      >
+        Open {artist} as a chapter
+      </Button>
       {inStory ? (
         <Button
           variant="ghost"
