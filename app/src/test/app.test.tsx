@@ -16,7 +16,8 @@ describe('App', () => {
     expect(screen.getByText('Your listening, as one story')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Play story/i })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Journey' }));
+    await user.click(screen.getByRole('button', { name: 'Explore' }));
+    await user.click(screen.getByRole('button', { name: 'Month by month' }));
     expect(screen.getByRole('img', { name: /Monthly listening minutes/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Spectrum' }));
@@ -28,7 +29,7 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Uncategorized \d+% - /i }));
     expect(screen.getByText(/never guessed/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Artists' }));
+    await user.click(screen.getByRole('button', { name: 'Library' }));
     expect(screen.getByText('Top artists')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Tracks' }));
@@ -44,8 +45,9 @@ describe('App', () => {
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Try the demo journey' }));
 
-    await user.click(screen.getByRole('button', { name: 'Story' }));
-    expect(screen.getByText('Your story in chapters')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Explore' }));
+    await user.click(screen.getByRole('button', { name: 'Habits' }));
+    expect(screen.getByText('Your habits and discoveries')).toBeInTheDocument();
     expect(screen.getAllByText(/First obsession/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Listening clock/i)).toBeInTheDocument();
     // Listening clock: a 24-hour dial; selecting an hour shows its share.
@@ -100,5 +102,32 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Demo data' }));
     await user.click(screen.getByRole('button', { name: '6 months' }));
     expect(useAppStore.getState().range).toBe('6m');
+  });
+
+  it('shows time-range chips only on views they filter', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    expect(screen.queryByRole('button', { name: '6 months' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Explore' }));
+    expect(screen.getByText('Worth coming back to')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '6 months' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Month by month' }));
+    expect(screen.getByRole('button', { name: '6 months' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Library' }));
+    expect(screen.getByRole('button', { name: '6 months' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Share' }));
+    expect(screen.queryByRole('button', { name: '6 months' })).not.toBeInTheDocument();
+  });
+
+  it('ends the story with links into the rest of the app', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getByRole('button', { name: 'Rediscover artists you left' }));
+    expect(useAppStore.getState().view).toBe('rediscover');
+    expect(screen.getByRole('button', { name: 'Rediscover' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
