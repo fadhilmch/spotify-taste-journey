@@ -55,14 +55,50 @@ export function renderShareCard(canvas: HTMLCanvasElement, data: ShareCardData, 
   // The artist sits in the upper-middle of the card; the figures are anchored above the footer.
   y = 400;
 
-  const fit = (text: string, maxWidth: number, start: number): number => {
-    let size = start;
-    ctx.font = `900 ${size}px Nunito, system-ui, sans-serif`;
-    while (size > 40 && ctx.measureText(text).width > maxWidth) {
-      size -= 6;
-      ctx.font = `900 ${size}px Nunito, system-ui, sans-serif`;
+  const wrap = (text: string, maxWidth: number, maxLines: number): string[] => {
+    const words = text.split(/\s+/).filter(Boolean);
+    const out: string[] = [];
+    let cur = '';
+    for (const w of words) {
+      const next = cur ? `${cur} ${w}` : w;
+      if (cur && ctx.measureText(next).width > maxWidth) {
+        out.push(cur);
+        cur = w;
+      } else cur = next;
     }
-    return size;
+    if (cur) out.push(cur);
+    if (out.length > maxLines) {
+      const kept = out.slice(0, maxLines);
+      let last = kept[maxLines - 1] ?? '';
+      while (last.length > 1 && ctx.measureText(`${last}...`).width > maxWidth) last = last.slice(0, -1);
+      kept[maxLines - 1] = `${last}...`;
+      return kept;
+    }
+    // A single unbroken word wider than the box still has to fit.
+    return out.map((l) => {
+      let t = l;
+      while (t.length > 1 && ctx.measureText(t).width > maxWidth) t = t.slice(0, -1);
+      return t === l ? l : `${t}...`;
+    });
+  };
+  /** Biggest size that keeps the name on one line, else two lines, else three smaller lines. */
+  const headline = (text: string, maxWidth: number, start: number): { size: number; lines: string[] } => {
+    for (let size = start; size >= 72; size -= 6) {
+      ctx.font = `900 ${size}px Nunito, system-ui, sans-serif`;
+      const l = wrap(text, maxWidth, 2);
+      if (l.length === 1 || (l.length === 2 && size <= 110 && !l[1]?.endsWith('...'))) {
+        if (ctx.measureText(l.join(' ')).width <= maxWidth || l.length === 2) return { size, lines: l };
+      }
+    }
+    ctx.font = '900 60px Nunito, system-ui, sans-serif';
+    return { size: 60, lines: wrap(text, maxWidth, 4) };
+  };
+  const drawHead = (text: string): void => {
+    const h = headline(text, W - pad * 2, 150);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `900 ${h.size}px Nunito, system-ui, sans-serif`;
+    h.lines.forEach((l, i) => ctx.fillText(l, pad, y + h.size + i * Math.round(h.size * 1.08)));
+    y += h.size + (h.lines.length - 1) * Math.round(h.size * 1.08);
   };
 
   if (bits.artist && data.focus) {
@@ -70,11 +106,8 @@ export function renderShareCard(canvas: HTMLCanvasElement, data: ShareCardData, 
     ctx.font = '700 32px Nunito, system-ui, sans-serif';
     ctx.fillText('Chapter artist', pad, y);
     y += 34;
-    const size = fit(data.focus.name, W - pad * 2, 150);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `900 ${size}px Nunito, system-ui, sans-serif`;
-    ctx.fillText(data.focus.name, pad, y + size);
-    y += size + 70;
+    drawHead(data.focus.name);
+    y += 70;
     ctx.fillStyle = '#ffffffe0';
     ctx.font = '700 32px Nunito, system-ui, sans-serif';
     ctx.fillText(focusLine(data.focus), pad, y, W - pad * 2);
@@ -83,21 +116,20 @@ export function renderShareCard(canvas: HTMLCanvasElement, data: ShareCardData, 
     ctx.font = '700 32px Nunito, system-ui, sans-serif';
     ctx.fillText('Top artist', pad, y);
     y += 34;
-    const size = fit(data.topArtist, W - pad * 2, 150);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `900 ${size}px Nunito, system-ui, sans-serif`;
-    ctx.fillText(data.topArtist, pad, y + size);
+    drawHead(data.topArtist);
   }
   const lines: string[] = [];
   if (bits.track && data.topTrack) lines.push(`"${data.topTrack.name}" - ${data.topTrack.artist}`);
   if (bits.minutes) lines.push(`${fmtCardMinutes(data.totalMinutes)} listened`);
   if (bits.genre && data.topGenre) lines.push(`Top genre: ${data.topGenre}`);
   if (bits.eras) lines.push(`${data.eraCount} artist eras`);
+  ctx.font = '700 44px Nunito, system-ui, sans-serif';
+  const rows = lines.flatMap((l) => wrap(l, W - pad * 2, 3));
   const label =
     data.focus && lines.length > 0 ? `ACROSS ALL YOUR LISTENING - ${data.rangeLabel.toUpperCase()}` : null;
   // Block height: optional label, then one 72 px row per line; its last baseline sits 130 px above the footer.
-  const blockTop = H - pad - 130 - (lines.length > 0 ? (lines.length - 1) * 72 : 0) - (label ? 70 : 0);
-  if (lines.length > 0) {
+  const blockTop = H - pad - 130 - (rows.length > 0 ? (rows.length - 1) * 72 : 0) - (label ? 70 : 0);
+  if (rows.length > 0) {
     ctx.fillStyle = '#ffffff22';
     ctx.fillRect(pad, blockTop - 70, W - pad * 2, 2);
   }
@@ -110,8 +142,8 @@ export function renderShareCard(canvas: HTMLCanvasElement, data: ShareCardData, 
   }
   ctx.fillStyle = '#ffffffe0';
   ctx.font = '700 44px Nunito, system-ui, sans-serif';
-  for (const line of lines) {
-    ctx.fillText(line, pad, ys, W - pad * 2);
+  for (const line of rows) {
+    ctx.fillText(line, pad, ys);
     ys += 72;
   }
 
