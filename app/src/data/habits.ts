@@ -1,5 +1,5 @@
-import { hourHistogram, weekdayHistogram } from './stats';
-import type { PlayEvent } from './types';
+import { discoveries, hourHistogram, sessions, skipStats, weekdayHistogram } from './stats';
+import type { PlayAggregate, PlayEvent } from './types';
 
 /**
  * Listening habits as story chapters. Counted from play timestamps only,
@@ -18,7 +18,7 @@ export interface HabitBeat {
   values: number[];
   /** One label per bar. */
   labels: string[];
-  /** Index of the busiest bar. */
+  /** Index of the highlighted bar; -1 for none. */
   peak: number;
 }
 
@@ -37,7 +37,7 @@ function argMin(v: number[]): number {
 const pct = (part: number, whole: number) => Math.round((part / whole) * 100);
 const hh = (h: number) => `${String(h).padStart(2, '0')}:00`;
 
-export function buildHabitBeats(events: PlayEvent[]): HabitBeat[] {
+export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = []): HabitBeat[] {
   const hours = hourHistogram(events);
   const hoursTotal = hours.reduce((a, b) => a + b, 0);
   if (hoursTotal === 0) return [];
@@ -72,6 +72,64 @@ export function buildHabitBeats(events: PlayEvent[]): HabitBeat[] {
       values: days,
       labels: DAYS.map((d) => d.slice(0, 3)),
       peak: dp,
+    });
+  }
+  const sk = skipStats(events);
+  if (sk.hasFlags) {
+    const flagged = events.filter((e) => e.skipped !== null);
+    const plays = new Array<number>(24).fill(0);
+    const skips = new Array<number>(24).fill(0);
+    for (const e of flagged) {
+      const d = new Date(e.ts);
+      if (Number.isNaN(d.getTime())) continue;
+      plays[d.getHours()] += 1;
+      if (e.skipped) skips[d.getHours()] += 1;
+    }
+    // Hours with fewer than 20 flagged plays are left empty: too few to compare.
+    const rates = plays.map((n, i) => (n >= 20 ? Math.round((skips[i] / n) * 100) : 0));
+    beats.push({
+      id: 'habit-skips',
+      label: 'Skips',
+      title: 'What you skip',
+      big: `${Math.round(sk.rate * 100)}%`,
+      unit: 'of plays were skipped',
+      caption:
+        "This uses Spotify's own skipped flag. Bars show the skip share per hour of day; hours with under 20 flagged plays are left empty.",
+      values: rates,
+      labels: rates.map((_, i) => (i % 6 === 0 ? String(i) : '')),
+      peak: rates.some((r) => r > 0) ? argMax(rates) : -1,
+    });
+  }
+  if (aggs.length > 0) {
+    const dis = discoveries(aggs);
+    const years = [...new Set(dis.byMonth.map((m) => m.month.slice(0, 4)))].sort();
+    const perYear = years.map((y) =>
+      dis.byMonth.filter((m) => m.month.startsWith(y)).reduce((a, m) => a + m.count, 0),
+    );
+    beats.push({
+      id: 'habit-new',
+      label: 'New names',
+      title: 'How often you find someone new',
+      big: dis.totalArtists.toLocaleString('en-US'),
+      unit: 'artists in total',
+      caption: `${dis.oneMonthWonders.toLocaleString('en-US')} were heard in a single month only, and ${dis.keepers.toLocaleString('en-US')} in three months or more. Bars show artists first heard in each year; the first and last years may be partly covered.`,
+      values: perYear,
+      labels: years.map((y) => y.slice(2)),
+      peak: argMax(perYear),
+    });
+  }
+  const ses = sessions(events);
+  if (ses.count > 0) {
+    beats.push({
+      id: 'habit-sessions',
+      label: 'Sessions',
+      title: 'How you sit down with music',
+      big: ses.count.toLocaleString('en-US'),
+      unit: 'listening sessions',
+      caption: `A session ends after 30 minutes without a play. Your longest ran ${ses.longestMin.toLocaleString('en-US')} minutes, across ${ses.activeDays.toLocaleString('en-US')} days with any listening.`,
+      values: [],
+      labels: [],
+      peak: -1,
     });
   }
   return beats;
