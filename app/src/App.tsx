@@ -3,6 +3,7 @@ import { buildMonths } from './data/stats';
 import { coverageLabel, looksLikePartialHistory } from './data/coverage';
 import type { View } from './data/types';
 import { useAppStore } from './state/store';
+import { RediscoverView } from './ui/RediscoverView';
 import { ArtistsView, TracksView } from './ui/ListsView';
 import { GenresView } from './ui/GenresView';
 import { FlowView } from './ui/FlowView';
@@ -23,17 +24,37 @@ const RANGES = [
   { id: 'all', label: 'All time' },
 ];
 
-const TABS: Array<[View, string]> = [
-  ['flow', 'The story'],
-  ['journey', 'Journey'],
-  ['story', 'Story'],
-  ['map', 'World'],
-  ['genres', 'Spectrum'],
-  ['artists', 'Artists'],
-  ['tracks', 'Tracks'],
-  ['share', 'Share'],
-  ['guide', 'Guide'],
+/** Four places to be. Story is the spine; Explore and Library hold the rest. */
+type SectionId = 'story' | 'explore' | 'library' | 'share' | 'guide';
+const SECTIONS: Array<{ id: SectionId; label: string; views: Array<[View, string]> }> = [
+  { id: 'story', label: 'Story', views: [['flow', 'Story']] },
+  {
+    id: 'explore',
+    label: 'Explore',
+    views: [
+      ['rediscover', 'Rediscover'],
+      ['journey', 'Month by month'],
+      ['story', 'Habits'],
+      ['map', 'World'],
+      ['genres', 'Spectrum'],
+    ],
+  },
+  {
+    id: 'library',
+    label: 'Library',
+    views: [
+      ['artists', 'Artists'],
+      ['tracks', 'Tracks'],
+    ],
+  },
+  { id: 'share', label: 'Share', views: [['share', 'Share']] },
+  { id: 'guide', label: 'Guide', views: [['guide', 'Guide']] },
 ];
+
+const sectionOf = (v: View) => SECTIONS.find((s) => s.views.some(([id]) => id === v)) ?? SECTIONS[0];
+
+/** Only these views change with the time-range chips; hide the chips elsewhere. */
+const RANGE_VIEWS: ReadonlySet<View> = new Set<View>(['journey', 'map', 'genres', 'artists', 'tracks']);
 
 /** One honest line per view - editorial headers instead of filler cards. */
 const VIEW_HEADS: Partial<Record<View, { title: string; blurb: string }>> = {
@@ -42,13 +63,17 @@ const VIEW_HEADS: Partial<Record<View, { title: string; blurb: string }>> = {
     blurb:
       'Scroll through the years: who led, who came back, and the quiet stretches - all counted from your plays.',
   },
+  rediscover: {
+    title: 'Rediscover your music',
+    blurb: 'Artists you loved and left, how your favourites changed year to year, and how much you explore.',
+  },
   journey: {
     title: 'Your listening, month by month',
     blurb: 'Minutes over time, who led each month, and the eras between them.',
   },
   story: {
-    title: 'Your story in chapters',
-    blurb: 'Eras, discoveries, sessions and habits - computed from your plays, nothing invented.',
+    title: 'Your habits and discoveries',
+    blurb: 'Eras, discoveries, sessions and listening habits - computed from your plays, nothing invented.',
   },
   share: {
     title: 'Share a card',
@@ -82,6 +107,7 @@ export default function App() {
   const playing = useAppStore((s) => s.playing);
   const setPlaying = useAppStore((s) => s.setPlaying);
 
+  const section = sectionOf(view);
   const months = React.useMemo(() => buildMonths(aggregates), [aggregates]);
 
   // Playback: advance the selected month on a timer.
@@ -104,10 +130,14 @@ export default function App() {
       <div className="tj-chrome">
         <div className="tj-side">
           <p className="tj-brand">Taste Journey</p>
-          <nav className="tj-nav" aria-label="Views">
-            {TABS.map(([id, label]) => (
-              <Tab key={id} on={view === id} onClick={() => setView(id)}>
-                {label}
+          <nav className="tj-nav" aria-label="Sections">
+            {SECTIONS.map((sec) => (
+              <Tab
+                key={sec.id}
+                on={section.id === sec.id}
+                onClick={() => section.id !== sec.id && setView(sec.views[0][0])}
+              >
+                {sec.label}
               </Tab>
             ))}
           </nav>
@@ -209,13 +239,24 @@ export default function App() {
                   )}
                 </>
               )}
-              <div className="tj-ranges" role="group" aria-label="Time range">
-                {RANGES.map((r) => (
-                  <Chip key={r.id} on={range === r.id} onClick={() => setRange(r.id)}>
-                    {r.label}
-                  </Chip>
-                ))}
-              </div>
+              {section.views.length > 1 && (
+                <div className="tj-ranges" role="group" aria-label={`${section.label} views`}>
+                  {section.views.map(([id, label]) => (
+                    <Chip key={id} on={view === id} onClick={() => setView(id)}>
+                      {label}
+                    </Chip>
+                  ))}
+                </div>
+              )}
+              {RANGE_VIEWS.has(view) && (
+                <div className="tj-ranges" role="group" aria-label="Time range">
+                  {RANGES.map((r) => (
+                    <Chip key={r.id} on={range === r.id} onClick={() => setRange(r.id)}>
+                      {r.label}
+                    </Chip>
+                  ))}
+                </div>
+              )}
               {VIEW_HEADS[view] && (
                 <header className="tj-viewhead">
                   <h2>{VIEW_HEADS[view]!.title}</h2>
@@ -223,6 +264,7 @@ export default function App() {
                 </header>
               )}
               {view === 'flow' && <FlowView aggs={aggregates} />}
+              {view === 'rediscover' && <RediscoverView aggs={aggregates} />}
               {view === 'journey' && <JourneyView months={months} aggs={aggregates} />}
               {view === 'story' && <StoryView months={months} aggs={aggregates} />}
               {view === 'map' && <MapView months={months} aggs={aggregates} />}
