@@ -258,6 +258,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .tj-mini-wrap,
+  .tj-mini-wrap em {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
   .tj-mini-val {
     color: var(--txt-2);
     font-size: 13px;
@@ -1294,6 +1300,23 @@
   .tj-flow-end {
     padding: 8px 0 40vh;
   }
+  .tj-flow-next {
+    margin-bottom: 16px;
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .tj-flow-next-title {
+    margin: 0 0 10px;
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .tj-flow-next-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
   @media (max-width: 860px) {
     .tj-flow {
       grid-template-columns: minmax(0, 1fr);
@@ -1330,7 +1353,7 @@
       min-height: 40vh;
     }
     .tj-flow-end {
-      padding-bottom: 30vh;
+      padding-bottom: 0;
     }
   }
 }
