@@ -205,6 +205,19 @@ function Stage({ story, active, total }: { story: Narrative; active: number; tot
   );
 }
 
+/** Bottom edge of the sticky stage when it sits above the chapters (phone layout); null on the two-column layout. */
+function stageBottom(): number | null {
+  const stage = document.querySelector('.tj-flow-left');
+  const list = document.querySelector('.tj-flow-chapters');
+  if (!stage || !list) return null;
+  const a = stage.getBoundingClientRect();
+  const b = list.getBoundingClientRect();
+  const stacked = a.width > b.width * 0.8 && a.left < b.right && a.right > b.left;
+  // Where the bottom edge sits once the stage has stuck to the top of the screen.
+  const top = parseFloat(getComputedStyle(stage).top) || 0;
+  return stacked ? top + a.height : null;
+}
+
 function MonthStrip({
   aggs,
   years,
@@ -265,29 +278,76 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
   const setView = useAppStore((st) => st.setView);
   const [playing, setPlaying] = React.useState(false);
   const sections = React.useRef<Array<HTMLElement | null>>([]);
+  const jump = React.useRef<{ i: number; until: number } | null>(null);
 
   React.useEffect(() => {
     if (!story || typeof IntersectionObserver === 'undefined') return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            const i = Number((e.target as HTMLElement).dataset.beat);
-            if (!Number.isNaN(i)) setActive(i);
-          }
+    let obs: IntersectionObserver | null = null;
+    const build = () => {
+      const j = jump.current;
+      if (j && Date.now() < j.until) {
+        // A jump is settling and the stage changed height: keep the target chapter under it.
+        const el = sections.current[j.i];
+        const b = stageBottom();
+        if (el && b !== null) {
+          const gap = el.getBoundingClientRect().top - b - 16;
+          if (Math.abs(gap) > 4) window.scrollBy({ top: gap, behavior: 'auto' });
         }
-      },
-      { rootMargin: '-35% 0px -55% 0px', threshold: 0 },
-    );
-    sections.current.forEach((el) => el && obs.observe(el));
-    return () => obs.disconnect();
+      }
+      obs?.disconnect();
+      // Stacked layout (phones): the active band sits just under the sticky stage.
+      const below = stageBottom();
+      const vh = window.innerHeight;
+      const margin =
+        below === null
+          ? '-35% 0px -55% 0px'
+          : `-${Math.round(below + 8)}px 0px -${Math.max(0, Math.round(vh - below - 72))}px 0px`;
+      obs = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              const i = Number((e.target as HTMLElement).dataset.beat);
+              if (!Number.isNaN(i)) setActive(i);
+            }
+          }
+        },
+        { rootMargin: margin, threshold: 0 },
+      );
+      sections.current.forEach((el) => el && obs?.observe(el));
+    };
+    build();
+    window.addEventListener('resize', build);
+    const stageEl = document.querySelector('.tj-flow-left');
+    const ro = typeof ResizeObserver !== 'undefined' && stageEl ? new ResizeObserver(build) : null;
+    if (ro && stageEl) ro.observe(stageEl);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', build);
+      obs?.disconnect();
+    };
   }, [story, extras]);
 
   const goTo = React.useCallback((i: number, instant = false) => {
-    sections.current[i]?.scrollIntoView({
-      behavior: instant || prefersReducedMotion() ? 'auto' : 'smooth',
-      block: 'center',
-    });
+    const el = sections.current[i];
+    if (!el) return;
+    const behavior = instant || prefersReducedMotion() ? 'auto' : 'smooth';
+    jump.current = { i, until: Date.now() + (behavior === 'smooth' ? 1800 : 900) };
+    const below = stageBottom();
+    if (below === null) {
+      el.scrollIntoView({ behavior, block: 'center' });
+      return;
+    }
+    // Stacked layout: put the chapter's top just under the sticky stage so its heading is never covered.
+    window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - below - 16, behavior });
+    // The stage changes height from chapter to chapter, so settle once more after the jump.
+    setTimeout(
+      () => {
+        const b = stageBottom();
+        const gap = el.getBoundingClientRect().top - (b ?? 0) - 16;
+        if (b !== null && Math.abs(gap) > 4) window.scrollBy({ top: gap, behavior: 'auto' });
+      },
+      behavior === 'smooth' ? 1000 : 120,
+    );
   }, []);
 
   React.useEffect(() => {
@@ -334,6 +394,7 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
       <div className="tj-flow">
         <div className="tj-flow-left">
           <MonthStrip aggs={aggs} years={story.years.map((y) => y.year)} from={strip.from} to={strip.to} />
+          <p className="tj-strip-note">The story always uses all time.</p>
           {active < nStory ? (
             <Stage story={story} active={active} total={total} />
           ) : (
@@ -380,6 +441,21 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
                 className={i === active ? 'tj-flow-chapter on' : 'tj-flow-chapter'}
               >
                 <h3>{b.title}</h3>
+                {x?.kind === 'origins' && (
+                  <div
+                    className="tj-flow-locked"
+                    aria-label="World and Spectrum, locked until you add artist origins"
+                  >
+                    <div>
+                      <strong>World</strong>
+                      <span>Locked until you add artist origins</span>
+                    </div>
+                    <div>
+                      <strong>Spectrum</strong>
+                      <span>Locked until you add artist origins</span>
+                    </div>
+                  </div>
+                )}
                 {x?.kind === 'origins' ? (
                   <div className="tj-flow-notice">
                     <p>
