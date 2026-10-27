@@ -13,6 +13,7 @@ function ArtistPanel({ aggs, artist }: { aggs: PlayAggregate[]; artist: string }
   const facts = React.useMemo(() => artistFacts(aggs, artist), [aggs, artist]);
   const story = React.useMemo(() => buildNarrative(aggs), [aggs]);
   if (!facts) return null;
+  const chapters = story ? story.beats.filter((b) => b.artists.includes(artist)) : [];
   const inStory = !!story && story.beats.some((b) => b.artists.includes(artist));
   const max = Math.max(1, ...facts.monthly.map((m) => m.minutes));
   const n = facts.monthly.length;
@@ -43,6 +44,9 @@ function ArtistPanel({ aggs, artist }: { aggs: PlayAggregate[]; artist: string }
       >
         <path d={d} />
       </svg>
+      {chapters.length > 0 && (
+        <p className="tj-note">In the story: {chapters.map((b) => b.title).join('; ')}</p>
+      )}
       {inStory ? (
         <Button
           variant="ghost"
@@ -65,7 +69,12 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
   const source = useAppStore((s) => s.source);
   const ranged = filterToMonths(aggs, rangeMonthKeys(months, range));
   const artists = topArtists(ranged, 12);
-  const [picked, setPicked] = React.useState<string | null>(null);
+  const libraryArtist = useAppStore((st) => st.libraryArtist);
+  const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
+  const [picked, setPicked] = React.useState<string | null>(libraryArtist);
+  React.useEffect(() => {
+    if (libraryArtist) setLibraryArtist(null);
+  }, [libraryArtist, setLibraryArtist]);
   const rangeLabel = { '4w': '4 weeks', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
 
   return (
