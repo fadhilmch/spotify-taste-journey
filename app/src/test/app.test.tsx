@@ -12,6 +12,12 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Try the demo journey' }));
     expect(screen.getAllByText(/invented demo data/i).length).toBeGreaterThan(0);
+    // The story flow is the first view: one chapter-by-chapter scroll.
+    expect(screen.getByText('Your listening, as one story')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Play story/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Explore' }));
+    await user.click(screen.getByRole('button', { name: 'Month by month' }));
     expect(screen.getByRole('img', { name: /Monthly listening minutes/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Spectrum' }));
@@ -23,7 +29,7 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Uncategorized \d+% - /i }));
     expect(screen.getByText(/never guessed/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Artists' }));
+    await user.click(screen.getByRole('button', { name: 'Library' }));
     expect(screen.getByText('Top artists')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Tracks' }));
@@ -39,9 +45,12 @@ describe('App', () => {
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Try the demo journey' }));
 
-    await user.click(screen.getByRole('button', { name: 'Story' }));
-    expect(screen.getByText('Your story in chapters')).toBeInTheDocument();
-    expect(screen.getAllByText(/First obsession/i).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: 'Explore' }));
+    await user.click(screen.getByRole('button', { name: 'Habits' }));
+    expect(screen.getByText('Your habits and discoveries')).toBeInTheDocument();
+    // Artist chapters live in the Story, not here.
+    expect(screen.queryByText(/First obsession/i)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open the story' })).toBeInTheDocument();
     expect(screen.getByText(/Listening clock/i)).toBeInTheDocument();
     // Listening clock: a 24-hour dial; selecting an hour shows its share.
     expect(
@@ -95,5 +104,135 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Demo data' }));
     await user.click(screen.getByRole('button', { name: '6 months' }));
     expect(useAppStore.getState().range).toBe('6m');
+  });
+
+  it('shows time-range chips only on views they filter', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    expect(screen.queryByRole('button', { name: '6 months' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Explore' }));
+    expect(screen.getByText('Worth coming back to')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '6 months' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Month by month' }));
+    expect(screen.getByRole('button', { name: '6 months' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Library' }));
+    expect(screen.getByRole('button', { name: '6 months' })).toBeInTheDocument();
+    expect(screen.getByText(/Scope: follows the range above/)).toBeInTheDocument();
+    // Share draws its card from the range, so the chips are shown there too.
+    await user.click(screen.getByRole('button', { name: 'Share' }));
+    expect(screen.getByRole('button', { name: '6 months' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '6 months' }));
+    expect(screen.getByText(/Scope: follows the range above \(6 months\)/)).toBeInTheDocument();
+    // The Top genre toggle is not offered.
+    expect(screen.queryByRole('checkbox', { name: /Top genre/i })).not.toBeInTheDocument();
+    // Pages without chips say they cover all time.
+    await user.click(screen.getByRole('button', { name: 'Explore' }));
+    expect(screen.getByText(/Scope: all time/)).toBeInTheDocument();
+  });
+
+  it('ends the story with links into the rest of the app', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getByRole('button', { name: 'Rediscover artists you left' }));
+    expect(useAppStore.getState().view).toBe('rediscover');
+    expect(screen.getByRole('button', { name: 'Rediscover' })).toHaveAttribute('aria-pressed', 'true');
+  });
+  it('shows full four-digit years on the rediscover cards', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getByRole('button', { name: 'Rediscover artists you left' }));
+    const years = document.querySelectorAll('.tj-year');
+    expect(years.length).toBeGreaterThan(0);
+    years.forEach((y) => expect(y.textContent).toMatch(/^\d{4}$/));
+  });
+
+  it('opens an artist panel from the library and jumps back into the story', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getByRole('button', { name: 'Library' }));
+    await user.click(screen.getByRole('button', { name: 'Artists' }));
+    const tile = document.querySelector('.tj-tile-btn') as HTMLElement;
+    await user.click(tile);
+    expect(document.querySelector('.tj-artist-panel')).not.toBeNull();
+    expect(screen.getByText(/First heard/)).toBeInTheDocument();
+  });
+
+  it('adds habit chapters to the story when play events exist', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    expect(screen.getByText('When you listen')).toBeInTheDocument();
+  });
+
+  it('links a story chapter to its artist in the library', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getAllByRole('button', { name: /^Library: / })[0]);
+    expect(useAppStore.getState().view).toBe('artists');
+    expect(document.querySelector('.tj-artist-panel')).not.toBeNull();
+  });
+
+  it('has a month strip, an optional origins step with a notice and Skip, and a contextual share chapter', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    expect(document.querySelectorAll('.tj-strip i').length).toBeGreaterThan(10);
+    expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+    expect(screen.getByText('The story always uses all time.')).toBeInTheDocument();
+    // The demo already has sample origins, so the cards must not claim to be locked.
+    expect(screen.queryByText('Locked until you add artist origins')).toBeNull();
+    expect(screen.getByText(/demo already has sample origins loaded/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Make a share card from / }));
+    expect(useAppStore.getState().view).toBe('share');
+    expect(useAppStore.getState().shareFocus).not.toBeNull();
+  });
+
+  it('opens an artist as a chapter from the library', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getByRole('button', { name: 'Library' }));
+    await user.click(screen.getByRole('button', { name: 'Artists' }));
+    await user.click(document.querySelector('.tj-tile-btn') as HTMLElement);
+    await user.click(screen.getByRole('button', { name: /as a chapter$/ }));
+    expect(useAppStore.getState().view).toBe('flow');
+    expect(document.querySelector('[data-beat] .tj-flow-links')).not.toBeNull();
+    expect(useAppStore.getState().artistChapter).not.toBeNull();
+  });
+
+  it('labels an artist-start share card as the chapter artist, not the top artist', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    useAppStore.getState().setShareFocus('Senja Radio');
+    await user.click(screen.getByRole('button', { name: 'Share' }));
+    expect(screen.getByRole('checkbox', { name: 'Chapter artist' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Top artist' })).toBeNull();
+    expect(screen.getByText(/covers that artist over all time/)).toBeInTheDocument();
+  });
+
+  it('shows the locked cards and the consent notice only while no origins exist', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    useAppStore.setState({ genres: {}, genresAreDemo: false });
+    expect(await screen.findAllByText('Locked until you add artist origins')).toHaveLength(2);
+    expect(screen.getByText(/artist names only, one request each to MusicBrainz/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add artist origins' })).toBeInTheDocument();
   });
 });

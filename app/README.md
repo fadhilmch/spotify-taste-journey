@@ -12,6 +12,11 @@ Two data sources, always clearly labeled:
 
 ## What it shows
 
+- **The story** - the first view: one scroll through your history. A sticky chart morphs from chapter
+  to chapter (who led each stretch, who came back, the quiet years) while the text scrolls past.
+  Every number is counted from your plays; partial first/last years are compared per month and
+  marked `*`. "Play story" scrolls through the chapters; motion is skipped when the system asks for
+  reduced motion.
 - **Journey** - minutes listened per month, selectable time ranges (4 weeks / 6 months /
   1 year / all time), top artists per selected month, and "artist eras" (who defined each
   stretch of your history).

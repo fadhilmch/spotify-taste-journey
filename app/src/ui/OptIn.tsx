@@ -6,7 +6,7 @@ import { Button, Card } from './primitives';
  * Nothing is fetched until the user enables it; copy states exactly what
  * leaves the device (artist names only) and what comes back.
  */
-export function OptInGate({ what }: { what: string }) {
+export function OptInGate({ what, plural = false }: { what: string; plural?: boolean }) {
   const matchState = useAppStore((s) => s.matchState);
   const matchProgress = useAppStore((s) => s.matchProgress);
   const matchError = useAppStore((s) => s.matchError);
@@ -17,7 +17,7 @@ export function OptInGate({ what }: { what: string }) {
       {matchState === 'idle' && (
         <Card
           id="tj-optin-h"
-          title={`${what} stays off until you enable it`}
+          title={`${what} ${plural ? 'stay' : 'stays'} off until you enable ${plural ? 'them' : 'it'}`}
           className="border-[hsl(45_90%_50%/0.35)]!"
         >
           <p className="tj-note">

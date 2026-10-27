@@ -232,6 +232,175 @@
     font-weight: 700;
     flex: 0 0 auto;
   }
+  .tj-year {
+    flex: 0 0 auto;
+    min-width: 44px;
+    color: var(--txt-2);
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .tj-habit-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 200px;
+    margin: 8px 0 0;
+  }
+  .tj-habit-col {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    height: 100%;
+    min-width: 0;
+  }
+  .tj-habit-bar {
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    background: var(--txt-2);
+    opacity: 0.45;
+    transition: height 0.6s ease;
+  }
+  .tj-habit-bar.peak {
+    background: #1ed760;
+    opacity: 1;
+  }
+  .tj-habit-lab {
+    height: 18px;
+    font-size: 12px;
+    color: var(--txt-2);
+    white-space: nowrap;
+  }
+  .tj-strip {
+    display: flex;
+    align-items: flex-end;
+    gap: 1px;
+    height: 34px;
+    margin-bottom: 8px;
+  }
+  .tj-strip i {
+    flex: 1 1 0;
+    background: var(--txt-2);
+    opacity: 0.3;
+    border-radius: 1px;
+    transition:
+      opacity 0.4s ease,
+      background-color 0.4s ease;
+  }
+  .tj-strip i.on {
+    background: #1ed760;
+    opacity: 1;
+  }
+  .tj-strip-note {
+    margin: -4px 0 8px;
+    font-size: 11px;
+    color: var(--txt-2);
+  }
+  .tj-flow-locked {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 8px 0 12px;
+  }
+  .tj-flow-locked div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px dashed var(--line);
+    opacity: 0.6;
+    font-size: 13px;
+  }
+  button.tj-flow-locked-btn,
+  .tj-flow-locked button {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .tj-flow-locked button:focus-visible {
+    outline: 2px solid #1ed760;
+  }
+  .tj-flow-notice {
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(245, 196, 81, 0.35);
+    background: rgba(245, 196, 81, 0.06);
+  }
+  .tj-flow-links {
+    margin-top: 10px;
+  }
+  .tj-artist-panel {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  }
+  .tj-artist-panel h3 {
+    margin: 0 0 6px;
+  }
+  .tj-artist-facts {
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 4px;
+  }
+  .tj-spark {
+    display: block;
+    width: 100%;
+    height: 48px;
+    margin-bottom: 12px;
+  }
+  .tj-spark path {
+    fill: none;
+    stroke: #1ed760;
+    stroke-width: 2;
+  }
+  .tj-tile:has(.tj-tile-spark) .tj-tile-btn {
+    display: flex;
+    flex-direction: column;
+  }
+  .tj-tile-note {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: var(--txt-2);
+  }
+  .tj-tile-spark {
+    display: block;
+    width: 100%;
+    height: 22px;
+    margin-top: auto;
+    padding-top: 8px;
+    box-sizing: content-box;
+  }
+  .tj-tile-spark path {
+    fill: none;
+    stroke: var(--green-soft, #1ed760);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+    opacity: 0.85;
+  }
+  .tj-tile-btn {
+    all: unset;
+    display: block;
+    cursor: pointer;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .tj-tile-btn:focus-visible {
+    outline: 2px solid #1ed760;
+    outline-offset: 2px;
+  }
   .tj-thumb {
     width: 40px;
     height: 40px;
@@ -257,6 +426,12 @@
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .tj-mini-wrap,
+  .tj-mini-wrap em {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
   }
   .tj-mini-val {
     color: var(--txt-2);
@@ -313,6 +488,7 @@
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 13px;
     padding: 12px;
+    display: flex;
   }
   .tj-tile:hover {
     background: #26262b;
@@ -371,6 +547,17 @@
     position: sticky;
     bottom: 0;
     z-index: 30;
+  }
+  /* Soft edge so the next chapter fades out above the bar instead of being cut by it. */
+  .tj-player::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 28px;
+    background: linear-gradient(to top, rgba(10, 10, 12, 0.85), transparent);
+    pointer-events: none;
   }
   .tj-player .tj-thumb {
     width: 46px;
@@ -1124,6 +1311,376 @@
     .tj *::after {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
+    }
+  }
+  /* Story flow: a sticky stage that morphs while chapters scroll past. */
+  .tj-flow {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .tj-flow-left {
+    position: sticky;
+    top: 16px;
+    /* Leave room for the fixed player bar so the stage is never covered. */
+    max-height: calc(100vh - 110px);
+    /* One height for every chapter, so the stage does not jump as the content changes. */
+    min-height: min(600px, calc(100vh - 110px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px 18px 12px;
+  }
+  .tj-flow-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  /* A chapter with no chart: let the number be the picture instead of leaving an empty card. */
+  .tj-flow-stage.hero {
+    justify-content: center;
+  }
+  .tj-flow-stage.hero .tj-flow-big {
+    font-size: clamp(52px, 9vw, 92px);
+    margin: 6px 0 10px;
+  }
+  .tj-scope {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: var(--txt-2);
+  }
+  .tj-flow-stage.hero-text .tj-flow-big {
+    font-size: clamp(34px, 5vw, 54px);
+  }
+  .tj-flow-stage.hero-text .tj-flow-big small {
+    display: block;
+    margin-top: 6px;
+  }
+  .tj-flow-kicker {
+    margin: 0;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--txt-2);
+  }
+  .tj-flow-big {
+    margin: 4px 0 6px;
+    font-size: clamp(30px, 6vw, 46px);
+    font-weight: 800;
+    line-height: 1.05;
+    color: var(--green-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .tj-flow-big small {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--txt-2);
+  }
+  .tj-flow-chart {
+    width: 100%;
+    height: auto;
+    max-height: calc(100vh - 330px);
+    min-height: 140px;
+    display: block;
+  }
+  .tj-flow-band {
+    fill: rgb(30 215 96 / 0.12);
+  }
+  .tj-flow-bar {
+    fill: var(--line);
+  }
+  .tj-flow-bar-partial {
+    fill: var(--panel-2);
+    stroke: var(--line);
+    stroke-dasharray: 3 3;
+  }
+  .tj-flow-ax {
+    fill: var(--txt-2);
+    font-size: 12px;
+  }
+  .tj-flow-line {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .tj-flow-dot {
+    transition: r 0.5s ease;
+  }
+  .tj-flow-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--txt-2);
+    min-height: 18px;
+  }
+  .tj-flow-legend i {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  .tj-flow-rail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+  .tj-flow-pip {
+    all: unset;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 28px;
+    padding: 0 8px;
+    border-radius: 14px;
+    font-size: 11px;
+    color: var(--txt-2);
+    transition:
+      background 0.3s ease,
+      color 0.3s ease;
+  }
+  .tj-flow-pip:focus-visible {
+    outline: 2px solid var(--green-soft);
+  }
+  .tj-flow-pipdot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--line);
+    transition:
+      background 0.3s ease,
+      transform 0.3s ease;
+  }
+  .tj-flow-pip.on {
+    color: var(--txt);
+    background: rgb(30 215 96 / 0.14);
+  }
+  .tj-flow-pip.on .tj-flow-pipdot {
+    background: var(--green-soft);
+    transform: scale(1.5);
+  }
+  .tj-flow-play {
+    margin-left: auto;
+  }
+  .tj-flow-chapters {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .tj-flow-chapter {
+    min-height: 62vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 16px 4px;
+    opacity: 0.38;
+    transform: translateY(8px);
+    transition:
+      opacity 0.6s ease,
+      transform 0.6s ease;
+  }
+  .tj-flow-chapter.on {
+    opacity: 1;
+    transform: none;
+  }
+  /* Hand-over: when a chapter becomes the active one its title, text and links settle in one after another. */
+  .tj-flow-chapter.on > * {
+    animation: tj-flow-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .tj-flow-chapter.on > *:nth-child(2) {
+    animation-delay: 0.08s;
+  }
+  .tj-flow-chapter.on > *:nth-child(n + 3) {
+    animation-delay: 0.16s;
+  }
+  /* A new habit stage builds itself: kicker and number first, then bars grow up from the baseline. */
+  .tj-flow-stage > .tj-flow-kicker,
+  .tj-flow-stage > .tj-flow-big {
+    animation: tj-flow-rise 0.45s ease-out both;
+  }
+  .tj-habit-bar {
+    transform-origin: bottom;
+    animation: tj-bar-grow 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 14ms + 0.03s);
+  }
+  @keyframes tj-flow-rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes tj-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  /* When the year chart comes back after the habit chapters, it fades in instead of popping. */
+  .tj-flow-stage > .tj-flow-chart,
+  .tj-flow-stage > .tj-flow-legend {
+    animation: tj-fade-in 0.5s ease-out both;
+  }
+  .tj-flow-stagewrap {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .tj-flow-ghost {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+    background: var(--panel);
+    animation: tj-stage-out 0.15s ease-in forwards;
+  }
+  .tj-flow-ghost .tj-flow-kicker,
+  .tj-flow-ghost .tj-flow-big {
+    visibility: hidden;
+  }
+  .tj-flow-ghost * {
+    animation: none !important;
+  }
+  @keyframes tj-stage-out {
+    to {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+  @keyframes tj-bar-grow {
+    from {
+      transform: scaleY(0.08);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+  .tj-flow-chapter h3 {
+    margin: 0 0 8px;
+    font-size: 22px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .tj-flow-chapter p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--txt-2);
+  }
+  .tj-flow-end {
+    padding: 8px 0 40vh;
+    max-width: 680px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+  .tj-flow-next {
+    margin-bottom: 16px;
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .tj-flow-next-title {
+    margin: 0 0 10px;
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .tj-flow-next-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  @media (max-width: 860px) {
+    .tj-flow {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+    }
+    .tj-flow-stage.hero .tj-flow-big {
+      font-size: 28px;
+      margin: 2px 0;
+    }
+    .tj-flow-left {
+      top: 0;
+      z-index: 2;
+      padding: 10px 12px 6px;
+      min-height: min(360px, 42vh);
+      border-radius: 0 0 16px 16px;
+    }
+    .tj-flow-big {
+      font-size: 28px;
+      margin: 2px 0;
+    }
+    .tj-flow-stage .tj-habit-bars {
+      height: min(159px, 19vh);
+    }
+    .tj-flow-chart {
+      max-height: 21vh;
+      min-height: 100px;
+    }
+    .tj-flow-pip {
+      display: none;
+    }
+    .tj-flow-rail {
+      margin-top: 4px;
+      padding-top: 4px;
+    }
+    .tj-flow-play {
+      margin-left: 0;
+    }
+    .tj-flow-ax {
+      font-size: 17px;
+    }
+    .tj-flow-chapter {
+      min-height: 36vh;
+      justify-content: flex-start;
+    }
+    /* Headings slide out under a soft edge instead of touching the stage. */
+    .tj-flow-left::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      height: 22px;
+      background: linear-gradient(to bottom, var(--bg), transparent);
+      pointer-events: none;
+    }
+    .tj-flow-end {
+      padding-bottom: 0;
+    }
+  }
+  /* Short phones: give the chapter text more of the screen. */
+  @media (max-width: 860px) and (max-height: 720px) {
+    .tj-flow-left {
+      min-height: min(300px, 40vh);
+      padding-top: 6px;
+    }
+    .tj-flow-stage .tj-habit-bars {
+      height: min(120px, 17vh);
+    }
+    .tj-flow-chart {
+      max-height: 17vh;
+      min-height: 84px;
+    }
+    .tj-flow-left .tj-strip-note {
+      display: none;
     }
   }
 }
