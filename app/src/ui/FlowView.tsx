@@ -1,6 +1,7 @@
 import React from 'react';
 import { buildNarrative, type Narrative } from '../data/narrative';
 import type { PlayAggregate } from '../data/types';
+import { useAppStore } from '../state/store';
 import { Button } from './primitives';
 
 const COLORS = ['#1ed760', '#f5c451', '#7aa7ff'];
@@ -166,6 +167,7 @@ function Stage({ story, active }: { story: Narrative; active: number }) {
 export function FlowView({ aggs }: { aggs: PlayAggregate[] }) {
   const story = React.useMemo(() => buildNarrative(aggs), [aggs]);
   const [active, setActive] = React.useState(0);
+  const setView = useAppStore((st) => st.setView);
   const [playing, setPlaying] = React.useState(false);
   const sections = React.useRef<Array<HTMLElement | null>>([]);
 
@@ -256,6 +258,26 @@ export function FlowView({ aggs }: { aggs: PlayAggregate[] }) {
           </li>
         ))}
         <li className="tj-flow-end">
+          <div className="tj-flow-next" role="group" aria-label="Keep going">
+            <p className="tj-flow-next-title">Keep going</p>
+            <div className="tj-flow-next-links">
+              <Button variant="ghost" onClick={() => setView('rediscover')}>
+                Rediscover artists you left
+              </Button>
+              <Button variant="ghost" onClick={() => setView('journey')}>
+                See every month
+              </Button>
+              <Button variant="ghost" onClick={() => setView('artists')}>
+                Open your library
+              </Button>
+              <Button variant="ghost" onClick={() => setView('map')}>
+                Where artists come from (optional)
+              </Button>
+              <Button variant="ghost" onClick={() => setView('share')}>
+                Make a share card
+              </Button>
+            </div>
+          </div>
           <p className="tj-note">
             Hours are minutes played divided by 60, summed from your plays. Chapters follow who led each year;
             nothing here says why your listening changed. Years marked * are partly covered.
