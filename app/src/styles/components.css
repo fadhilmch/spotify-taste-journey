@@ -158,6 +158,56 @@
     font-size: 12.5px;
     line-height: 1.5;
   }
+  .tj-meta {
+    color: var(--txt-2);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .tj-meta > summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    cursor: pointer;
+    list-style: none;
+  }
+  .tj-meta > summary::-webkit-details-marker {
+    display: none;
+  }
+  .tj-meta-how {
+    color: var(--green-soft);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .tj-meta > summary:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  .tj-meta-body {
+    display: grid;
+    gap: 6px;
+    margin: 6px 0 2px;
+    padding: 8px 0 8px 14px;
+    border-left: 2px solid var(--panel);
+  }
+  .tj-meta-body p {
+    margin: 0;
+  }
+  .tj-viewbody {
+    animation: tj-view-in 0.32s ease-out both;
+  }
+  @keyframes tj-view-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
   .tj-note-error {
     color: #ffb4a2;
   }
