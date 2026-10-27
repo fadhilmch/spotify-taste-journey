@@ -1,5 +1,6 @@
 import React from 'react';
-import { buildMonths } from './data/stats';
+import { buildMonths, filterToMonths, rangeMonthKeys } from './data/stats';
+import { NEXT_STEP, takeaway } from './data/takeaways';
 import { coverageLabel, looksLikePartialHistory } from './data/coverage';
 import type { View } from './data/types';
 import { useAppStore } from './state/store';
@@ -12,6 +13,7 @@ import { JourneyView } from './ui/JourneyView';
 import { MapView } from './ui/MapView';
 import { PlayerBar } from './ui/PlayerBar';
 import { Chip, Tab } from './ui/primitives';
+import { StoryLead, StoryNext } from './ui/StoryLead';
 import { ShareView } from './ui/ShareView';
 import { SourceBar } from './ui/SourceBar';
 import { StoryView } from './ui/StoryView';
@@ -115,7 +117,14 @@ export default function App() {
   const playing = useAppStore((s) => s.playing);
   const setPlaying = useAppStore((s) => s.setPlaying);
 
+  const genres = useAppStore((s) => s.genres);
   const section = sectionOf(view);
+  const leadText = React.useMemo(() => {
+    const ranged = RANGE_VIEWS.has(view)
+      ? filterToMonths(aggregates, rangeMonthKeys(buildMonths(aggregates), range))
+      : aggregates;
+    return takeaway(view, ranged, buildMonths(aggregates), genres).lead;
+  }, [view, range, aggregates, genres]);
   const months = React.useMemo(() => buildMonths(aggregates), [aggregates]);
 
   // Playback: advance the selected month on a timer.
@@ -271,6 +280,7 @@ export default function App() {
                   <p>{VIEW_HEADS[view]!.blurb}</p>
                 </header>
               )}
+              {view !== 'flow' && leadText && <StoryLead key={view + range} text={leadText} />}
               {view !== 'flow' && (
                 <p className="tj-scope">
                   {RANGE_VIEWS.has(view)
@@ -287,6 +297,16 @@ export default function App() {
               {view === 'artists' && <ArtistsView months={months} aggs={aggregates} />}
               {view === 'tracks' && <TracksView months={months} aggs={aggregates} />}
               {view === 'share' && <ShareView months={months} aggs={aggregates} />}
+              {NEXT_STEP[view] && (
+                <StoryNext
+                  question={NEXT_STEP[view]!.question}
+                  action={NEXT_STEP[view]!.action}
+                  onGo={() => {
+                    setView(NEXT_STEP[view]!.to);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
+              )}
             </>
           )}
         </div>
