@@ -180,6 +180,8 @@ describe('App', () => {
     expect(document.querySelectorAll('.tj-strip i').length).toBeGreaterThan(10);
     expect(screen.getByText(/artist names only, one request each to MusicBrainz/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+    expect(screen.getByText('The story always uses all time.')).toBeInTheDocument();
+    expect(screen.getAllByText('Locked until you add artist origins')).toHaveLength(2);
     await user.click(screen.getByRole('button', { name: /^Make a share card from / }));
     expect(useAppStore.getState().view).toBe('share');
     expect(useAppStore.getState().shareFocus).not.toBeNull();
