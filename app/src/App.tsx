@@ -95,6 +95,7 @@ export default function App() {
   const loadProgress = useAppStore((s) => s.loadProgress);
   const error = useAppStore((s) => s.error);
   const aggregates = useAppStore((s) => s.aggregates);
+  const events = useAppStore((s) => s.events);
   const parseInfo = useAppStore((s) => s.parseInfo);
   const fileReports = useAppStore((s) => s.fileReports);
   const clearError = useAppStore((s) => s.clearError);
@@ -263,7 +264,7 @@ export default function App() {
                   <p>{VIEW_HEADS[view]!.blurb}</p>
                 </header>
               )}
-              {view === 'flow' && <FlowView aggs={aggregates} />}
+              {view === 'flow' && <FlowView aggs={aggregates} events={events} />}
               {view === 'rediscover' && <RediscoverView aggs={aggregates} />}
               {view === 'journey' && <JourneyView months={months} aggs={aggregates} />}
               {view === 'story' && <StoryView months={months} aggs={aggregates} />}
