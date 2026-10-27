@@ -171,4 +171,31 @@ describe('App', () => {
     expect(useAppStore.getState().view).toBe('artists');
     expect(document.querySelector('.tj-artist-panel')).not.toBeNull();
   });
+
+  it('has a month strip, an optional origins step with a notice and Skip, and a contextual share chapter', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    expect(document.querySelectorAll('.tj-strip i').length).toBeGreaterThan(10);
+    expect(screen.getByText(/artist names only, one request each to MusicBrainz/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Make a share card from / }));
+    expect(useAppStore.getState().view).toBe('share');
+    expect(useAppStore.getState().shareFocus).not.toBeNull();
+  });
+
+  it('opens an artist as a chapter from the library', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getByRole('button', { name: 'Library' }));
+    await user.click(screen.getByRole('button', { name: 'Artists' }));
+    await user.click(document.querySelector('.tj-tile-btn') as HTMLElement);
+    await user.click(screen.getByRole('button', { name: /as a chapter$/ }));
+    expect(useAppStore.getState().view).toBe('flow');
+    expect(document.querySelector('[data-beat] .tj-flow-links')).not.toBeNull();
+    expect(useAppStore.getState().artistChapter).not.toBeNull();
+  });
 });
