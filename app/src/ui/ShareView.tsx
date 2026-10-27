@@ -9,6 +9,7 @@ export function ShareView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
   const range = useAppStore((s) => s.range);
   const source = useAppStore((s) => s.source);
   const genres = useAppStore((s) => s.genres);
+  const shareFocus = useAppStore((s) => s.shareFocus);
   const cardBits = useAppStore((s) => s.cardBits);
   const toggleCardBit = useAppStore((s) => s.toggleCardBit);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -26,7 +27,7 @@ export function ShareView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
 
   const data: ShareCardData = {
     rangeLabel,
-    topArtist: topArtist?.name ?? null,
+    topArtist: shareFocus ?? topArtist?.name ?? null,
     topTrack: topTrack ? { name: topTrack.name, artist: topTrack.artist } : null,
     totalMinutes: total,
     topGenre,
@@ -45,10 +46,11 @@ export function ShareView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
       setCanvasError(err instanceof Error ? err.message : String(err));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range, aggs, genres, cardBits, source]);
+  }, [range, aggs, genres, cardBits, source, shareFocus]);
 
   return (
     <Card id="tj-share-h" title="Share card" aside={<CardAside>You pick what goes on it</CardAside>}>
+      {shareFocus && <p className="tj-note">Started from the chapter on {shareFocus}.</p>}
       <div className="tj-sharewrap">
         {canvasError ? (
           <p className="tj-note tj-note-error" role="alert">
