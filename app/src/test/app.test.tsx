@@ -178,10 +178,11 @@ describe('App', () => {
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Demo data' }));
     expect(document.querySelectorAll('.tj-strip i').length).toBeGreaterThan(10);
-    expect(screen.getByText(/artist names only, one request each to MusicBrainz/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
     expect(screen.getByText('The story always uses all time.')).toBeInTheDocument();
-    expect(screen.getAllByText('Locked until you add artist origins')).toHaveLength(2);
+    // The demo already has sample origins, so the cards must not claim to be locked.
+    expect(screen.queryByText('Locked until you add artist origins')).toBeNull();
+    expect(screen.getByText(/demo already has sample origins loaded/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^Make a share card from / }));
     expect(useAppStore.getState().view).toBe('share');
     expect(useAppStore.getState().shareFocus).not.toBeNull();
@@ -211,5 +212,16 @@ describe('App', () => {
     expect(screen.getByRole('checkbox', { name: 'Chapter artist' })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'Top artist' })).toBeNull();
     expect(screen.getByText(/covers that artist over all time/)).toBeInTheDocument();
+  });
+
+  it('shows the locked cards and the consent notice only while no origins exist', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    useAppStore.setState({ genres: {}, genresAreDemo: false });
+    expect(await screen.findAllByText('Locked until you add artist origins')).toHaveLength(2);
+    expect(screen.getByText(/artist names only, one request each to MusicBrainz/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add artist origins' })).toBeInTheDocument();
   });
 });
