@@ -1,5 +1,12 @@
 import React from 'react';
-import { buildHabitBeats, type HabitBeat } from '../data/habits';
+import {
+  buildArtistBeat,
+  buildHabitBeats,
+  buildReturnedBeat,
+  ORIGINS_BEAT,
+  SHARE_BEAT,
+  type HabitBeat,
+} from '../data/habits';
 import { buildNarrative, type Narrative } from '../data/narrative';
 import type { PlayAggregate, PlayEvent } from '../data/types';
 import { useAppStore } from '../state/store';
@@ -198,15 +205,63 @@ function Stage({ story, active, total }: { story: Narrative; active: number; tot
   );
 }
 
+function MonthStrip({
+  aggs,
+  years,
+  from,
+  to,
+}: {
+  aggs: PlayAggregate[];
+  years: string[];
+  from: number;
+  to: number;
+}) {
+  const bars = React.useMemo(() => {
+    const by = new Map<string, number>();
+    for (const a of aggs) by.set(a.month, (by.get(a.month) ?? 0) + a.ms);
+    const keys = [...by.keys()].sort();
+    const max = Math.max(1, ...by.values());
+    return keys.map((k) => ({ k, h: by.get(k)! / max }));
+  }, [aggs]);
+  const lo = years[from] ?? '';
+  const hi = years[to] ?? '';
+  const any = from >= 0 && to >= 0;
+  return (
+    <div
+      className="tj-strip"
+      role="img"
+      aria-label="Minutes played in every month. The months of the current chapter are highlighted."
+    >
+      {bars.map((b) => (
+        <i
+          key={b.k}
+          className={any && b.k.slice(0, 4) >= lo && b.k.slice(0, 4) <= hi ? 'on' : undefined}
+          style={{ height: `${Math.max(4, b.h * 100)}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: PlayEvent[] }) {
   const story = React.useMemo(() => buildNarrative(aggs), [aggs]);
-  const habits = React.useMemo(() => buildHabitBeats(events, aggs), [events, aggs]);
+  const artistChapter = useAppStore((st) => st.artistChapter);
+  const extras = React.useMemo(() => {
+    const list: HabitBeat[] = [...buildHabitBeats(events, aggs)];
+    const ret = buildReturnedBeat(aggs);
+    if (ret) list.push(ret);
+    const art = artistChapter ? buildArtistBeat(aggs, artistChapter) : null;
+    if (art) list.push(art);
+    list.push(ORIGINS_BEAT, SHARE_BEAT);
+    return list;
+  }, [events, aggs, artistChapter]);
   const nStory = story ? story.beats.length : 0;
-  const total = nStory + habits.length;
+  const total = nStory + extras.length;
   const [active, setActive] = React.useState(0);
   const storyFocus = useAppStore((st) => st.storyFocus);
   const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
   const setStoryFocus = useAppStore((st) => st.setStoryFocus);
+  const setShareFocus = useAppStore((st) => st.setShareFocus);
   const setView = useAppStore((st) => st.setView);
   const [playing, setPlaying] = React.useState(false);
   const sections = React.useRef<Array<HTMLElement | null>>([]);
@@ -226,7 +281,7 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
     );
     sections.current.forEach((el) => el && obs.observe(el));
     return () => obs.disconnect();
-  }, [story]);
+  }, [story, extras]);
 
   const goTo = React.useCallback((i: number) => {
     sections.current[i]?.scrollIntoView({
@@ -257,18 +312,33 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
     if (i >= 0) setTimeout(() => goTo(i), 50);
   }, [story, storyFocus, goTo, setStoryFocus]);
 
+  React.useEffect(() => {
+    if (!story || !artistChapter) return;
+    const i = extras.findIndex((b) => b.kind === 'artist');
+    if (i >= 0) setTimeout(() => goTo(nStory + i), 80);
+  }, [story, artistChapter, extras, nStory, goTo]);
+
   if (!story) return null;
+  const chapters: Array<{ id: string; label: string }> = [...story.beats, ...extras];
+  const cur = active < nStory ? story.beats[active] : null;
+  const strip = cur ? { from: cur.from, to: cur.to } : { from: -1, to: -1 };
+  const cardArtist = (() => {
+    const last = [...story.beats].reverse().find((b) => b.artists.length > 0);
+    const here = cur && cur.artists.length > 0 ? cur.artists[0] : null;
+    return here ?? extras[active - nStory]?.artist ?? last?.artists[0] ?? null;
+  })();
   return (
     <>
       <div className="tj-flow">
         <div className="tj-flow-left">
+          <MonthStrip aggs={aggs} years={story.years.map((y) => y.year)} from={strip.from} to={strip.to} />
           {active < nStory ? (
             <Stage story={story} active={active} total={total} />
           ) : (
-            <HabitStage beat={habits[active - nStory]} chapter={active + 1} total={total} />
+            <HabitStage beat={extras[active - nStory]} chapter={active + 1} total={total} />
           )}
           <div className="tj-flow-rail" role="group" aria-label="Chapters">
-            {[...story.beats, ...habits].map((b, i) => (
+            {chapters.map((b, i) => (
               <button
                 key={b.id}
                 type="button"
@@ -296,32 +366,86 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
           </div>
         </div>
         <ol className="tj-flow-chapters">
-          {[...story.beats, ...habits].map((b, i) => (
-            <li
-              key={b.id}
-              ref={(el) => {
-                sections.current[i] = el;
-              }}
-              data-beat={i}
-              className={i === active ? 'tj-flow-chapter on' : 'tj-flow-chapter'}
-            >
-              <h3>{b.title}</h3>
-              <p>{b.caption}</p>
-              {'artists' in b && b.artists.length > 0 && (
-                <div className="tj-flow-links">
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setLibraryArtist(b.artists[0]);
-                      setView('artists');
-                    }}
-                  >
-                    Library: {b.artists[0]}
-                  </Button>
-                </div>
-              )}
-            </li>
-          ))}
+          {[...story.beats, ...extras].map((b, i) => {
+            const x = i >= nStory ? extras[i - nStory] : null;
+            return (
+              <li
+                key={b.id}
+                ref={(el) => {
+                  sections.current[i] = el;
+                }}
+                data-beat={i}
+                className={i === active ? 'tj-flow-chapter on' : 'tj-flow-chapter'}
+              >
+                <h3>{b.title}</h3>
+                {x?.kind === 'origins' ? (
+                  <div className="tj-flow-notice">
+                    <p>
+                      <strong>What it sends:</strong> artist names only, one request each to MusicBrainz, a
+                      public music database. No plays, dates or minutes. Results stay on this device. You can
+                      skip it and nothing else changes.
+                    </p>
+                    <div className="tj-flow-links">
+                      <Button onClick={() => setView('map')}>Add artist origins</Button>
+                      <Button variant="ghost" onClick={() => goTo(i + 1)}>
+                        Skip
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p>{b.caption}</p>
+                )}
+                {x?.kind === 'returned' && (
+                  <div className="tj-flow-links">
+                    <Button variant="ghost" onClick={() => setView('rediscover')}>
+                      See who and when
+                    </Button>
+                  </div>
+                )}
+                {x?.kind === 'artist' && x.artist && (
+                  <div className="tj-flow-links">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setLibraryArtist(x.artist ?? null);
+                        setView('artists');
+                      }}
+                    >
+                      Library: {x.artist}
+                    </Button>
+                  </div>
+                )}
+                {x?.kind === 'share' && (
+                  <div className="tj-flow-links">
+                    <Button
+                      onClick={() => {
+                        setShareFocus(cardArtist);
+                        setView('share');
+                      }}
+                    >
+                      Make a share card{cardArtist ? ` from ${cardArtist}` : ''}
+                    </Button>
+                  </div>
+                )}
+                {'artists' in b && b.artists.length > 0 && (
+                  <div className="tj-flow-links">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setLibraryArtist(b.artists[0]);
+                        setView('artists');
+                      }}
+                    >
+                      Library: {b.artists[0]}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setView('rediscover')}>
+                      Go deeper: eras and new names
+                    </Button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ol>
       </div>
       <div className="tj-flow-end">
