@@ -105,7 +105,11 @@ function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number
       )}
       {beat.kind !== 'origins' && beat.kind !== 'share' && (
         <p className="tj-flow-legend">
-          <span>Counted from your play timestamps.</span>
+          <span>
+            {beat.id === 'habit-skips'
+              ? 'Counted from how each play ended.'
+              : 'Counted from your play timestamps.'}
+          </span>
         </p>
       )}
     </div>
