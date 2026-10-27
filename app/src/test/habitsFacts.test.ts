@@ -41,11 +41,30 @@ describe('more habit chapters', () => {
     expect(ids).toContain('habit-new');
     expect(ids).not.toContain('habit-skips');
   });
-  it('adds a skips chapter when the file carries skipped flags', () => {
-    const events = Array.from({ length: 30 }, (_, i) => ({ ...ev(at(2, 21), 1), skipped: i < 15 }));
+  it('adds a forward-button chapter by hour when only one year is covered', () => {
+    const events = Array.from({ length: 30 }, (_, i) => ({
+      ...ev(at(2, 21), 1),
+      reasonEnd: i < 15 ? 'fwdbtn' : 'trackdone',
+    }));
     const b = buildHabitBeats(events).find((x) => x.id === 'habit-skips')!;
     expect(b.big).toBe('50%');
     expect(b.values[21]).toBe(50);
+  });
+  it('tells the forward-button story by year and explains an unreliable skipped flag', () => {
+    const mk = (y: string, n: number, fwd: number, flagged: boolean) =>
+      Array.from({ length: n }, (_, i) => ({
+        ...ev(at(2, 21), 1),
+        ts: `${y}-05-02T21:00:00Z`,
+        reasonEnd: i < fwd ? 'fwdbtn' : 'trackdone',
+        skipped: flagged ? i < fwd : false,
+      }));
+    const events = [...mk('2019', 200, 20, false), ...mk('2024', 200, 100, true)];
+    const b = buildHabitBeats(events).find((x) => x.id === 'habit-skips')!;
+    expect(b.title).toBe('When you press forward');
+    expect(b.values).toEqual([10, 50]);
+    expect(b.labels).toEqual(['19', '24']);
+    expect(b.caption).toContain('10% in 2019 to 50% in 2024');
+    expect(b.caption).toContain('skipped flag reads zero for 2019 in this file');
   });
 });
 
@@ -84,5 +103,20 @@ describe('buildReturnedBeat', () => {
     expect(b.kind).toBe('returned');
     expect(b.big).toBe('1');
     expect(b.caption).toContain('Old (peak 2019)');
+  });
+});
+
+describe('forward-button story arc', () => {
+  it('names the peak year when it is neither the first nor the last', () => {
+    const mk = (y: string, fwd: number) =>
+      Array.from({ length: 200 }, (_, i) => ({
+        ...ev('2020-01-01T21:00:00Z', 1),
+        ts: `${y}-05-02T21:00:00Z`,
+        reasonEnd: i < fwd ? 'fwdbtn' : 'trackdone',
+      }));
+    const b = buildHabitBeats([...mk('2018', 20), ...mk('2022', 120), ...mk('2025', 40)]).find(
+      (x) => x.id === 'habit-skips',
+    )!;
+    expect(b.caption).toContain('It was 10% in 2018, highest in 2022 at 60%, and 20% in 2025.');
   });
 });
