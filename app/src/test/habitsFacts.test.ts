@@ -23,11 +23,29 @@ describe('buildHabitBeats', () => {
     // 2026-03-02 is a Monday; local time, so build the stamps from local parts.
     const at = (day: number, hour: number) => new Date(2026, 2, day, hour, 0, 0).toISOString();
     const beats = buildHabitBeats([ev(at(2, 21), 60), ev(at(2, 21), 30), ev(at(3, 8), 30)]);
-    expect(beats.map((b) => b.id)).toEqual(['habit-hours', 'habit-days']);
+    expect(beats.map((b) => b.id)).toEqual(['habit-hours', 'habit-days', 'habit-sessions']);
     expect(beats[0].big).toBe('21:00');
     expect(beats[0].caption).toContain('75%');
     expect(beats[1].big).toBe('Monday');
     expect(beats[1].values).toHaveLength(7);
+  });
+});
+
+describe('more habit chapters', () => {
+  const at = (day: number, hour: number) => new Date(2026, 2, day, hour, 0, 0).toISOString();
+  it('adds sessions, and new names when aggregates are given, but no skips without flags', () => {
+    const events = [ev(at(2, 21), 10), ev(at(2, 21), 10), ev(at(5, 9), 10)];
+    const aggs: PlayAggregate[] = [{ month: '2026-03', artist: 'A', track: 't', ms: 1 }];
+    const ids = buildHabitBeats(events, aggs).map((b) => b.id);
+    expect(ids).toContain('habit-sessions');
+    expect(ids).toContain('habit-new');
+    expect(ids).not.toContain('habit-skips');
+  });
+  it('adds a skips chapter when the file carries skipped flags', () => {
+    const events = Array.from({ length: 30 }, (_, i) => ({ ...ev(at(2, 21), 1), skipped: i < 15 }));
+    const b = buildHabitBeats(events).find((x) => x.id === 'habit-skips')!;
+    expect(b.big).toBe('50%');
+    expect(b.values[21]).toBe(50);
   });
 });
 
