@@ -159,7 +159,7 @@ export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAgg
 
   return (
     <>
-      {source === 'export' && <OptInGate what="World map and genres" />}
+      {source === 'export' && <OptInGate what="World map and genres" plural />}
 
       <Section
         id="tj-world-h"
