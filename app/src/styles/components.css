@@ -1565,7 +1565,7 @@
   }
   @keyframes tj-bar-grow {
     from {
-      transform: scaleY(0);
+      transform: scaleY(0.08);
     }
     to {
       transform: scaleY(1);
@@ -1664,6 +1664,23 @@
     }
     .tj-flow-end {
       padding-bottom: 0;
+    }
+  }
+  /* Short phones: give the chapter text more of the screen. */
+  @media (max-width: 860px) and (max-height: 720px) {
+    .tj-flow-left {
+      min-height: min(300px, 40vh);
+      padding-top: 6px;
+    }
+    .tj-flow-stage .tj-habit-bars {
+      height: min(120px, 17vh);
+    }
+    .tj-flow-chart {
+      max-height: 17vh;
+      min-height: 84px;
+    }
+    .tj-flow-left .tj-strip-note {
+      display: none;
     }
   }
 }
