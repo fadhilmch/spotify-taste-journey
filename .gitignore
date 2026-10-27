@@ -23,3 +23,8 @@ app/tsconfig.tsbuildinfo
 *~
 .idea/
 .vscode/
+
+# Private MusicBrainz collection files
+artists.jsonl
+history/
+musicbrainz-run/
