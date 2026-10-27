@@ -113,6 +113,45 @@ export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAgg
   const sel = pins.find((p) => p.shape.id === selected) ?? null;
   const gated = source === 'export' && matchState === 'idle';
 
+  // Place each label below its pin, else above it; skip a label that would still overlap one already placed
+  // (every country stays in the list under the map).
+  const labelAt = new Map<string, number>();
+  {
+    const placed: Array<[number, number, number, number]> = [];
+    const hits = (b: [number, number, number, number]) =>
+      placed.some((q) => b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1]);
+    for (const p of pins) {
+      const r = 8 + 20 * Math.sqrt(p.minutes / maxMin);
+      const [cx, cy] = p.shape.centroid;
+      const w = p.country.length * labelUnits * 0.6;
+      const mk = (base: number): [number, number, number, number] => [
+        cx - w / 2,
+        base - labelUnits,
+        cx + w / 2,
+        base + labelUnits * 0.3,
+      ];
+      const below = cy + r + labelUnits;
+      const above = cy - r - labelUnits * 0.3 - 22;
+      const others = pins
+        .filter((o) => o !== p)
+        .map((o): [number, number, number, number] => {
+          const or = 8 + 20 * Math.sqrt(o.minutes / maxMin);
+          const [ox, oy] = o.shape.centroid;
+          return [ox - or, oy - or, ox + or, oy + or];
+        });
+      const onPin = (bx: [number, number, number, number]) =>
+        others.some((q) => bx[0] < q[2] && bx[2] > q[0] && bx[1] < q[3] && bx[3] > q[1]);
+      for (const y of [below, above]) {
+        const bx = mk(y);
+        if (!hits(bx) && !onPin(bx)) {
+          placed.push(bx);
+          labelAt.set(p.shape.id, y);
+          break;
+        }
+      }
+    }
+  }
+
   const routePath =
     route.length >= 2
       ? route.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.shape.centroid[0]},${p.shape.centroid[1]}`).join(' ')
@@ -120,7 +159,7 @@ export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAgg
 
   return (
     <>
-      {source === 'export' && <OptInGate what="World map and genres" />}
+      {source === 'export' && <OptInGate what="World map and genres" plural />}
 
       <Section
         id="tj-world-h"
@@ -179,14 +218,16 @@ export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAgg
                       fill={p.hue != null ? `hsl(${p.hue} 60% 52%)` : '#5a5a60'}
                       pointerEvents="none"
                     />
-                    <text
-                      className="tj-world-label"
-                      x={cx}
-                      y={cy + r + labelUnits}
-                      style={{ fontSize: labelUnits }}
-                    >
-                      {p.country}
-                    </text>
+                    {labelAt.has(p.shape.id) && (
+                      <text
+                        className="tj-world-label"
+                        x={cx}
+                        y={labelAt.get(p.shape.id)}
+                        style={{ fontSize: labelUnits }}
+                      >
+                        {p.country}
+                      </text>
+                    )}
                   </g>
                 );
               })}

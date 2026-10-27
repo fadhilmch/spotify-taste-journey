@@ -1,29 +1,19 @@
 import React from 'react';
 import {
-  chapters,
   discoveries,
-  filterToMonths,
   fmtMinutes,
   hourHistogram,
   mixStats,
   monthLabel,
-  rangeMonthKeys,
   sessions,
   skipStats,
   weekdayHistogram,
 } from '../data/stats';
-import type { Chapter, MonthBucket, PlayAggregate } from '../data/types';
+import type { MonthBucket, PlayAggregate } from '../data/types';
 import type { DiscoveryStats } from '../data/stats';
 import { useAppStore } from '../state/store';
 import { artistBackground } from './theme';
-import { Button, Card, CardAside } from './primitives';
-
-const KIND_LABEL: Record<Chapter['kind'], string> = {
-  first: 'First obsession',
-  takeover: 'The takeover',
-  phase: 'A new phase',
-  comeback: 'The comeback',
-};
+import { Card, CardAside } from './primitives';
 
 const WEEKDAY = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -256,19 +246,12 @@ function MiniBars({
 
 export function StoryView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAggregate[] }) {
   const events = useAppStore((s) => s.events);
-  const range = useAppStore((s) => s.range);
-  const setMonth = useAppStore((s) => s.setMonth);
-  const setPlaying = useAppStore((s) => s.setPlaying);
   const setView = useAppStore((s) => s.setView);
 
-  // Everything on this view follows the time filter, except discoveries:
-  // first-ever listens only make sense across the full history.
-  const rangeKeys = rangeMonthKeys(months, range);
-  const rangedMonths = months.filter((m) => rangeKeys.has(m.key));
-  const rangedAggs = filterToMonths(aggs, rangeKeys);
-  const rangedEvents = events.filter((e) => rangeKeys.has(e.ts.slice(0, 7)));
+  // Habits always cover all time: this page has no range chips, so it must not
+  // silently follow a range picked on another page.
+  const rangedEvents = events;
 
-  const ch = chapters(rangedMonths, rangedAggs);
   const clock = hourHistogram(rangedEvents);
   const week = weekdayHistogram(rangedEvents);
   const peakHour = clock.indexOf(Math.max(...clock));
@@ -277,52 +260,14 @@ export function StoryView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
   const sess = sessions(rangedEvents);
   const mix = mixStats(rangedEvents);
 
-  const playStory = () => {
-    if (ch.length > 0) {
-      setMonth(ch[0].from);
-      setPlaying(true);
-    }
-  };
-
   return (
     <>
-      <Card id="tj-chapters-h" title="Chapters" aside={<Button onClick={playStory}>Play the story</Button>}>
-        <p className="tj-note">
-          Chapters are stretches where one artist led your listening. Labels come only from your minutes -
-          nothing is invented. Playing scrubs the timeline from chapter one.
-        </p>
-        <ol className="tj-chapters">
-          {ch.map((c, i) => (
-            <li key={c.artist + c.from}>
-              <button
-                type="button"
-                className="tj-chapter"
-                onClick={() => {
-                  setMonth(c.from);
-                  setPlaying(false);
-                  setView('journey');
-                }}
-                aria-label={`Chapter ${i + 1}: ${c.artist}, ${monthLabel(c.from).label} to ${monthLabel(c.to).label}`}
-              >
-                <span className="tj-chapter-num">{i + 1}</span>
-                <span className="tj-thumb" style={{ background: artistBackground(c.artist) }} />
-                <span className="tj-chapter-body">
-                  <span className="tj-chapter-kind">
-                    {KIND_LABEL[c.kind]}
-                    {c.current ? ' - where you are now' : ''}
-                  </span>
-                  <span className="tj-chapter-artist">{c.artist}</span>
-                  <span className="tj-chapter-meta">
-                    {monthLabel(c.from).label} - {monthLabel(c.to).label} · {fmtMinutes(c.minutes)} ·{' '}
-                    {Math.round(c.share * 100)}% of those months
-                    {c.topTrack ? ` · top track: ${c.topTrack}` : ''}
-                  </span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      </Card>
+      <p className="tj-note">
+        Artist chapters are in the Story.{' '}
+        <button type="button" className="tj-linkbtn" onClick={() => setView('flow')}>
+          Open the story
+        </button>
+      </p>
 
       <Card
         id="tj-clock-h"

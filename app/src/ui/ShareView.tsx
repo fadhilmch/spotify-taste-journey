@@ -1,3 +1,4 @@
+import { artistFacts } from '../data/artistFacts';
 import React from 'react';
 import { downloadShareCard, renderShareCard, type ShareCardData } from '../lib/shareCanvas';
 import { artistEras, filterToMonths, genreMix, rangeMonthKeys, topArtists, topTracks } from '../data/stats';
@@ -9,6 +10,7 @@ export function ShareView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
   const range = useAppStore((s) => s.range);
   const source = useAppStore((s) => s.source);
   const genres = useAppStore((s) => s.genres);
+  const shareFocus = useAppStore((s) => s.shareFocus);
   const cardBits = useAppStore((s) => s.cardBits);
   const toggleCardBit = useAppStore((s) => s.toggleCardBit);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -24,9 +26,18 @@ export function ShareView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
   const eraCount = artistEras(months, aggs).length;
   const hasMbGenres = Object.values(genres).some((g) => g.source === 'musicbrainz');
 
+  const focusFacts = shareFocus ? artistFacts(aggs, shareFocus) : null;
   const data: ShareCardData = {
     rangeLabel,
     topArtist: topArtist?.name ?? null,
+    focus: focusFacts
+      ? {
+          name: focusFacts.artist,
+          minutes: focusFacts.minutes,
+          firstMonth: focusFacts.firstMonth,
+          lastMonth: focusFacts.lastMonth,
+        }
+      : null,
     topTrack: topTrack ? { name: topTrack.name, artist: topTrack.artist } : null,
     totalMinutes: total,
     topGenre,
@@ -39,16 +50,22 @@ export function ShareView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
     const canvas = canvasRef.current;
     if (!canvas) return;
     try {
-      renderShareCard(canvas, data, cardBits);
+      renderShareCard(canvas, data, { ...cardBits, genre: false });
       setCanvasError(null);
     } catch (err) {
       setCanvasError(err instanceof Error ? err.message : String(err));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range, aggs, genres, cardBits, source]);
+  }, [range, aggs, genres, cardBits, source, shareFocus]);
 
   return (
     <Card id="tj-share-h" title="Share card" aside={<CardAside>You pick what goes on it</CardAside>}>
+      {shareFocus && (
+        <p className="tj-note">
+          Started from the chapter on {shareFocus}. The artist line covers that artist over all time. The
+          lines under "Across all your listening" are whole-history figures.
+        </p>
+      )}
       <div className="tj-sharewrap">
         {canvasError ? (
           <p className="tj-note tj-note-error" role="alert">
@@ -60,10 +77,9 @@ export function ShareView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
         <div className="tj-cardopts">
           {(
             [
-              ['artist', 'Top artist'],
+              ['artist', focusFacts ? 'Chapter artist' : 'Top artist'],
               ['track', 'Top track'],
               ['minutes', 'Minutes'],
-              ['genre', 'Top genre'],
               ['eras', 'Era count'],
             ] as Array<[keyof CardBits, string]>
           ).map(([k, label]) => (
