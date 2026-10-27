@@ -3,12 +3,19 @@ import type { CardBits } from '../state/store';
 export interface ShareCardData {
   rangeLabel: string;
   topArtist: string | null;
+  /** An artist picked from a story chapter. Its numbers cover that artist only, over all time. */
+  focus?: { name: string; minutes: number; firstMonth: string; lastMonth: string } | null;
   topTrack: { name: string; artist: string } | null;
   totalMinutes: number;
   topGenre: string | null;
   eraCount: number;
   sourceLabel: string; // 'demo data' or 'my Spotify export'
   genreCredit: string | null; // e.g. 'Genre data: MusicBrainz (CC BY-NC-SA)'
+}
+
+/** The line under a chapter artist's name. States its scope: this artist, all time. */
+export function focusLine(f: { minutes: number; firstMonth: string; lastMonth: string }): string {
+  return `${fmtCardMinutes(f.minutes)} played by this artist, ${f.firstMonth} to ${f.lastMonth}`;
 }
 
 export function fmtCardMinutes(min: number): string {
@@ -57,7 +64,21 @@ export function renderShareCard(canvas: HTMLCanvasElement, data: ShareCardData, 
     return size;
   };
 
-  if (bits.artist && data.topArtist) {
+  if (bits.artist && data.focus) {
+    ctx.fillStyle = '#ffffff99';
+    ctx.font = '700 32px Nunito, system-ui, sans-serif';
+    ctx.fillText('Chapter artist', pad, y);
+    y += 34;
+    const size = fit(data.focus.name, W - pad * 2, 116);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `900 ${size}px Nunito, system-ui, sans-serif`;
+    ctx.fillText(data.focus.name, pad, y + size);
+    y += size + 50;
+    ctx.fillStyle = '#ffffffe0';
+    ctx.font = '700 38px Nunito, system-ui, sans-serif';
+    ctx.fillText(focusLine(data.focus), pad, y, W - pad * 2);
+    y += 80;
+  } else if (bits.artist && data.topArtist) {
     ctx.fillStyle = '#ffffff99';
     ctx.font = '700 32px Nunito, system-ui, sans-serif';
     ctx.fillText('Top artist', pad, y);
@@ -67,6 +88,12 @@ export function renderShareCard(canvas: HTMLCanvasElement, data: ShareCardData, 
     ctx.font = `900 ${size}px Nunito, system-ui, sans-serif`;
     ctx.fillText(data.topArtist, pad, y + size);
     y += size + 70;
+  }
+  if (data.focus && (bits.track || bits.minutes || bits.genre)) {
+    ctx.fillStyle = '#ffffff99';
+    ctx.font = '700 30px Nunito, system-ui, sans-serif';
+    ctx.fillText(`ACROSS ALL YOUR LISTENING - ${data.rangeLabel.toUpperCase()}`, pad, y);
+    y += 56;
   }
   ctx.fillStyle = '#ffffffe0';
   ctx.font = '700 44px Nunito, system-ui, sans-serif';
