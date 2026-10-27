@@ -1,6 +1,6 @@
 import React from 'react';
-import { buildMonths } from './data/stats';
-import { coverageLabel, looksLikePartialHistory } from './data/coverage';
+import { buildMonths, filterToMonths, rangeMonthKeys } from './data/stats';
+import { NEXT_STEP, takeaway } from './data/takeaways';
 import type { View } from './data/types';
 import { useAppStore } from './state/store';
 import { RediscoverView } from './ui/RediscoverView';
@@ -12,6 +12,8 @@ import { JourneyView } from './ui/JourneyView';
 import { MapView } from './ui/MapView';
 import { PlayerBar } from './ui/PlayerBar';
 import { Chip, Tab } from './ui/primitives';
+import { DataMeta } from './ui/DataMeta';
+import { StoryLead, StoryNext } from './ui/StoryLead';
 import { ShareView } from './ui/ShareView';
 import { SourceBar } from './ui/SourceBar';
 import { StoryView } from './ui/StoryView';
@@ -103,8 +105,6 @@ export default function App() {
   const error = useAppStore((s) => s.error);
   const aggregates = useAppStore((s) => s.aggregates);
   const events = useAppStore((s) => s.events);
-  const parseInfo = useAppStore((s) => s.parseInfo);
-  const fileReports = useAppStore((s) => s.fileReports);
   const clearError = useAppStore((s) => s.clearError);
   const view = useAppStore((s) => s.view);
   const setView = useAppStore((s) => s.setView);
@@ -115,7 +115,14 @@ export default function App() {
   const playing = useAppStore((s) => s.playing);
   const setPlaying = useAppStore((s) => s.setPlaying);
 
+  const genres = useAppStore((s) => s.genres);
   const section = sectionOf(view);
+  const leadText = React.useMemo(() => {
+    const ranged = RANGE_VIEWS.has(view)
+      ? filterToMonths(aggregates, rangeMonthKeys(buildMonths(aggregates), range))
+      : aggregates;
+    return takeaway(view, ranged, buildMonths(aggregates), genres).lead;
+  }, [view, range, aggregates, genres]);
   const months = React.useMemo(() => buildMonths(aggregates), [aggregates]);
 
   // Playback: advance the selected month on a timer.
@@ -188,65 +195,7 @@ export default function App() {
 
           {!loading && !error && view !== 'guide' && source !== null && aggregates.length > 0 && (
             <>
-              {parseInfo && (
-                <>
-                  <p className="tj-note">
-                    {parseInfo.eventCount.toLocaleString()} plays read
-                    {parseInfo.files && parseInfo.files > 1 ? ` from ${parseInfo.files} history files` : ''}
-                    {parseInfo.format
-                      ? ` (${parseInfo.format === 'extended' ? 'extended' : 'legacy'} export)`
-                      : ' (extended and legacy exports combined)'}
-                    {parseInfo.skipped > 0
-                      ? `, ${parseInfo.skipped.toLocaleString()} non-music or invalid rows skipped`
-                      : ''}
-                    {(parseInfo.duplicates ?? 0) > 0
-                      ? `, ${parseInfo.duplicates!.toLocaleString()} duplicate rows merged`
-                      : ''}
-                    {(parseInfo.crossPackageDuplicates ?? 0) > 0
-                      ? `, ${parseInfo.crossPackageDuplicates!.toLocaleString()} plays already in your extended history removed`
-                      : ''}
-                    .
-                  </p>
-                  {fileReports &&
-                    (() => {
-                      const notHistory = fileReports.filter((r) => r.status === 'not-history');
-                      const unreadable = fileReports.filter((r) => r.status === 'unreadable');
-                      const names = (list: typeof notHistory) =>
-                        list
-                          .slice(0, 4)
-                          .map((r) => r.name)
-                          .join(', ') + (list.length > 4 ? `, +${list.length - 4} more` : '');
-                      return (
-                        <>
-                          {notHistory.length > 0 && (
-                            <p className="tj-note">
-                              {notHistory.length === 1
-                                ? '1 file had no listening history and was skipped: '
-                                : `${notHistory.length} files had no listening history and were skipped: `}
-                              {names(notHistory)}.
-                            </p>
-                          )}
-                          {unreadable.length > 0 && (
-                            <p className="tj-note">
-                              {unreadable.length === 1
-                                ? '1 file could not be read as JSON and was skipped: '
-                                : `${unreadable.length} files could not be read as JSON and were skipped: `}
-                              {names(unreadable)}.
-                            </p>
-                          )}
-                        </>
-                      );
-                    })()}
-                  {parseInfo.firstTs && parseInfo.lastTs && (
-                    <p className="tj-note">
-                      Covers {coverageLabel(parseInfo.firstTs)} to {coverageLabel(parseInfo.lastTs)}.
-                      {looksLikePartialHistory(parseInfo)
-                        ? " This looks like Spotify's 1-year Account data export - request the Extended streaming history package for your full history (see the guide)."
-                        : ''}
-                    </p>
-                  )}
-                </>
-              )}
+              <DataMeta />
               {section.views.length > 1 && (
                 <div className="tj-ranges" role="group" aria-label={`${section.label} views`}>
                   {section.views.map(([id, label]) => (
@@ -271,6 +220,7 @@ export default function App() {
                   <p>{VIEW_HEADS[view]!.blurb}</p>
                 </header>
               )}
+              {view !== 'flow' && leadText && <StoryLead key={view + range} text={leadText} />}
               {view !== 'flow' && (
                 <p className="tj-scope">
                   {RANGE_VIEWS.has(view)
@@ -278,15 +228,28 @@ export default function App() {
                     : 'Scope: all time, whatever range is picked elsewhere'}
                 </p>
               )}
-              {view === 'flow' && <FlowView aggs={aggregates} events={events} />}
-              {view === 'rediscover' && <RediscoverView aggs={aggregates} />}
-              {view === 'journey' && <JourneyView months={months} aggs={aggregates} />}
-              {view === 'story' && <StoryView months={months} aggs={aggregates} />}
-              {view === 'map' && <MapView months={months} aggs={aggregates} />}
-              {view === 'genres' && <GenresView months={months} aggs={aggregates} />}
-              {view === 'artists' && <ArtistsView months={months} aggs={aggregates} />}
-              {view === 'tracks' && <TracksView months={months} aggs={aggregates} />}
-              {view === 'share' && <ShareView months={months} aggs={aggregates} />}
+              <div className="tj-viewbody" key={view}>
+                {view === 'flow' && <FlowView aggs={aggregates} events={events} />}
+                {view === 'rediscover' && <RediscoverView aggs={aggregates} />}
+                {view === 'journey' && <JourneyView months={months} aggs={aggregates} />}
+                {view === 'story' && <StoryView months={months} aggs={aggregates} />}
+                {view === 'map' && <MapView months={months} aggs={aggregates} />}
+                {view === 'genres' && <GenresView months={months} aggs={aggregates} />}
+                {view === 'artists' && <ArtistsView months={months} aggs={aggregates} />}
+                {view === 'tracks' && <TracksView months={months} aggs={aggregates} />}
+                {view === 'share' && <ShareView months={months} aggs={aggregates} />}
+              </div>
+              {NEXT_STEP[view] && (
+                <StoryNext
+                  question={NEXT_STEP[view]!.question}
+                  action={NEXT_STEP[view]!.action}
+                  onGo={() => {
+                    setView(NEXT_STEP[view]!.to);
+                    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' });
+                  }}
+                />
+              )}
             </>
           )}
         </div>
