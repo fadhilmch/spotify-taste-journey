@@ -55,7 +55,7 @@ export function RediscoverView({ aggs }: { aggs: PlayAggregate[] }) {
         <ol className="tj-mini">
           {eras.map((e) => (
             <li key={e.year}>
-              <span className="tj-rank">{e.year.slice(2)}</span>
+              <span className="tj-year">{e.year}</span>
               <span className="tj-mini-name tj-mini-wrap">
                 {e.top.join(', ')}
                 <em>
@@ -77,7 +77,7 @@ export function RediscoverView({ aggs }: { aggs: PlayAggregate[] }) {
         <ol className="tj-mini">
           {explore.map((x) => (
             <li key={x.year}>
-              <span className="tj-rank">{x.year.slice(2)}</span>
+              <span className="tj-year">{x.year}</span>
               <span className="tj-mini-name tj-mini-wrap">
                 <span
                   role="img"
