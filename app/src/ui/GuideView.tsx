@@ -1,3 +1,4 @@
+import { useAppStore } from '../state/store';
 import { Card } from './primitives';
 const STEPS: Array<[string, string]> = [
   [
@@ -16,8 +17,15 @@ const STEPS: Array<[string, string]> = [
 ];
 
 export function GuideView() {
+  const parseInfo = useAppStore((st) => st.parseInfo);
   return (
     <>
+      {parseInfo && (
+        <p className="tj-note">
+          Loaded now: {parseInfo.eventCount.toLocaleString()} plays
+          {parseInfo.files && parseInfo.files > 1 ? ` from ${parseInfo.files} files` : ''}.
+        </p>
+      )}
       <Card className="py-[26px]! text-center">
         <h3 className="m-0 text-[19px] font-extrabold tracking-[-0.02em]">Bring your listening history</h3>
         <p className="mx-auto mt-2 max-w-[520px] text-[13px] leading-[1.55] text-txt-2">
