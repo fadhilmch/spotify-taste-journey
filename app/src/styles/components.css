@@ -1550,6 +1550,10 @@
     background: var(--panel);
     animation: tj-stage-out 0.15s ease-in forwards;
   }
+  .tj-flow-ghost .tj-flow-kicker,
+  .tj-flow-ghost .tj-flow-big {
+    visibility: hidden;
+  }
   .tj-flow-ghost * {
     animation: none !important;
   }
