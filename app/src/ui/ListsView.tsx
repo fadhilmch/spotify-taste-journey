@@ -105,9 +105,10 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
     const b = r[1].slice(0, 4);
     return a === b ? ` · heard in ${a}` : ` · heard ${a} to ${b}`;
   };
-  // Minutes per month for each artist over the whole history, so every tile's line shares one time axis.
+  // Minutes per month for each artist across the selected range, so every tile's line shares one time axis.
   const series = React.useMemo(() => {
-    const keys = months.map((m) => m.key);
+    const inRange = rangeMonthKeys(months, range);
+    const keys = months.map((m) => m.key).filter((k) => inRange.has(k));
     const pos = new Map(keys.map((k, i) => [k, i]));
     const out = new Map<string, number[]>();
     for (const a of aggs) {
@@ -121,7 +122,7 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
       row[i] += a.ms / 60000;
     }
     return out;
-  }, [aggs, months]);
+  }, [aggs, months, range]);
   const spark = (name: string) => {
     const row = series.get(name);
     if (!row || row.length < 2) return null;
@@ -138,7 +139,7 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
         viewBox="0 0 100 16"
         preserveAspectRatio="none"
         role="img"
-        aria-label={`Minutes per month for ${name}, whole history`}
+        aria-label={`Minutes per month for ${name}, ${rangeLabel.toLowerCase()}`}
       >
         <path d={d} vectorEffect="non-scaling-stroke" />
       </svg>
@@ -185,6 +186,9 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
           </div>
         ))}
       </div>
+      <p className="tj-tile-note">
+        Lines show minutes per month in the selected range ({rangeLabel.toLowerCase()}).
+      </p>
       {picked && <ArtistPanel aggs={aggs} artist={picked} />}
     </Card>
   );
