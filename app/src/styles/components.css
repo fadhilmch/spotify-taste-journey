@@ -273,6 +273,9 @@
     color: var(--txt-2);
     white-space: nowrap;
   }
+  .tj-flow-links {
+    margin-top: 10px;
+  }
   .tj-artist-panel {
     margin-top: 16px;
     padding: 16px;
