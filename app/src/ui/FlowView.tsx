@@ -68,23 +68,21 @@ function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number
       <p className="tj-flow-big">
         <span>{beat.big}</span> <small>{beat.unit}</small>
       </p>
-      <div
-        className="tj-habit-bars"
-        role="img"
-        aria-label={`${beat.title}: minutes per bar. ${beat.caption}`}
-      >
-        {beat.values.map((v, i) => (
-          <div key={i} className="tj-habit-col">
-            <div
-              className={i === beat.peak ? 'tj-habit-bar peak' : 'tj-habit-bar'}
-              style={{ height: `${Math.max(2, (v / max) * 100)}%` }}
-            />
-            <span className="tj-habit-lab">{beat.labels[i]}</span>
-          </div>
-        ))}
-      </div>
+      {beat.values.length > 0 && (
+        <div className="tj-habit-bars" role="img" aria-label={`${beat.title}. ${beat.caption}`}>
+          {beat.values.map((v, i) => (
+            <div key={i} className="tj-habit-col">
+              <div
+                className={i === beat.peak ? 'tj-habit-bar peak' : 'tj-habit-bar'}
+                style={{ height: `${Math.max(2, (v / max) * 100)}%` }}
+              />
+              <span className="tj-habit-lab">{beat.labels[i]}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <p className="tj-flow-legend">
-        <span>Minutes played, counted from play timestamps.</span>
+        <span>Counted from your play timestamps.</span>
       </p>
     </div>
   );
@@ -202,11 +200,12 @@ function Stage({ story, active, total }: { story: Narrative; active: number; tot
 
 export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: PlayEvent[] }) {
   const story = React.useMemo(() => buildNarrative(aggs), [aggs]);
-  const habits = React.useMemo(() => buildHabitBeats(events), [events]);
+  const habits = React.useMemo(() => buildHabitBeats(events, aggs), [events, aggs]);
   const nStory = story ? story.beats.length : 0;
   const total = nStory + habits.length;
   const [active, setActive] = React.useState(0);
   const storyFocus = useAppStore((st) => st.storyFocus);
+  const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
   const setStoryFocus = useAppStore((st) => st.setStoryFocus);
   const setView = useAppStore((st) => st.setView);
   const [playing, setPlaying] = React.useState(false);
@@ -308,6 +307,19 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
             >
               <h3>{b.title}</h3>
               <p>{b.caption}</p>
+              {'artists' in b && b.artists.length > 0 && (
+                <div className="tj-flow-links">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setLibraryArtist(b.artists[0]);
+                      setView('artists');
+                    }}
+                  >
+                    Library: {b.artists[0]}
+                  </Button>
+                </div>
+              )}
             </li>
           ))}
         </ol>
