@@ -384,10 +384,13 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
   const chapters: Array<{ id: string; label: string }> = [...story.beats, ...extras];
   const cur = active < nStory ? story.beats[active] : null;
   const strip = cur ? { from: cur.from, to: cur.to } : { from: -1, to: -1 };
+  // The card starts from the nearest chapter at or before this one that has an artist.
   const cardArtist = (() => {
-    const last = [...story.beats].reverse().find((b) => b.artists.length > 0);
-    const here = cur && cur.artists.length > 0 ? cur.artists[0] : null;
-    return here ?? extras[active - nStory]?.artist ?? last?.artists[0] ?? null;
+    for (let i = active; i >= 0; i -= 1) {
+      const name = i < nStory ? story.beats[i].artists[0] : extras[i - nStory]?.artist;
+      if (name) return name;
+    }
+    return story.beats.find((b) => b.artists.length > 0)?.artists[0] ?? null;
   })();
   return (
     <>
