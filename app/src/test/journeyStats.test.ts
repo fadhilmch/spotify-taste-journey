@@ -5,9 +5,12 @@ import {
   hourHistogram,
   mixStats,
   sessions,
+  albumStats,
   forwardByYear,
+  loopStats,
   skipFlagGapYears,
   skipStats,
+  startStats,
   weekdayHistogram,
 } from '../data/stats';
 import { parseStreamingHistory } from '../data/parseExport';
@@ -21,6 +24,8 @@ const ev = (over: Partial<PlayEvent>): PlayEvent => ({
   ms: 180000,
   skipped: false,
   reasonEnd: 'trackdone',
+  reasonStart: null,
+  album: null,
   shuffle: true,
   offline: false,
   platform: 'android',
@@ -222,5 +227,73 @@ describe('demo fixtures', () => {
     const m = mixStats(events);
     expect(m.shuffleShare).not.toBeNull();
     expect(m.platforms.length).toBeGreaterThan(2);
+  });
+});
+
+describe('loops, albums and starts', () => {
+  const at = (min: number) => `2024-03-05T10:${String(min).padStart(2, '0')}:00Z`;
+  it('finds runs of one track within the gap and names the longest', () => {
+    const rows = [
+      ...Array.from({ length: 6 }, (_, i) => ev({ ts: at(i), track: 'Loop', artist: 'L' })),
+      ev({ ts: at(7), track: 'Other', artist: 'L' }),
+      ...Array.from({ length: 4 }, (_, i) => ev({ ts: at(10 + i), track: 'Short', artist: 'L' })),
+      // same track again but hours later: not part of the same run
+      ev({ ts: '2024-03-05T20:00:00Z', track: 'Loop', artist: 'L' }),
+    ];
+    const l = loopStats(rows);
+    expect(l.runs).toBe(1);
+    expect(l.longest).toMatchObject({ count: 6, track: 'Loop', artist: 'L', endMonth: 'March 2024' });
+    expect(l.byYear).toEqual([{ year: '2024', runs: 1 }]);
+  });
+  it('fills years without a run with zero so the bars have no gap', () => {
+    const run = (y: string) =>
+      Array.from({ length: 5 }, (_, i) => ev({ ts: `${y}-02-01T10:0${i}:00Z`, track: 'R', artist: 'Z' }));
+    const l = loopStats([...run('2021'), ...run('2024')]);
+    expect(l.byYear.map((y) => [y.year, y.runs])).toEqual([
+      ['2021', 1],
+      ['2022', 0],
+      ['2023', 0],
+      ['2024', 1],
+    ]);
+  });
+  it('counts albums with enough different tracks, not repeats of one track', () => {
+    const wide = Array.from({ length: 9 }, (_, i) => ev({ artist: 'A', track: `t${i}`, album: 'Wide' }));
+    const narrow = Array.from({ length: 20 }, () => ev({ artist: 'A', track: 'same', album: 'Narrow' }));
+    const a = albumStats([...wide, ...narrow, ev({ album: null })]);
+    expect(a.albums).toBe(2);
+    expect(a.wide).toBe(1);
+    expect(a.top[0]).toMatchObject({ album: 'Wide', tracks: 9 });
+    expect(a.byYear).toEqual([{ year: '2025', wide: 1 }]);
+  });
+  it('splits starts into chosen, carried on and forward, and reports blank without them', () => {
+    expect(startStats([ev({ reasonStart: null })]).hasStarts).toBe(false);
+    const rows = [
+      ...Array.from({ length: 2 }, () => ev({ reasonStart: 'clickrow' })),
+      ev({ reasonStart: 'backbtn' }),
+      ...Array.from({ length: 5 }, () => ev({ reasonStart: 'trackdone' })),
+      ev({ reasonStart: 'fwdbtn' }),
+      ev({ reasonStart: 'appload' }),
+    ];
+    const s = startStats(rows);
+    expect(s.chosen).toBeCloseTo(3 / 10, 5);
+    expect(s.carried).toBeCloseTo(5 / 10, 5);
+    expect(s.forward).toBeCloseTo(1 / 10, 5);
+  });
+  it('reads reason_start and album from extended rows and nothing else new', () => {
+    const s = parseStreamingHistory([
+      {
+        ts: '2024-01-01T10:00:00Z',
+        ms_played: 60000,
+        master_metadata_track_name: 'T',
+        master_metadata_album_artist_name: 'A',
+        master_metadata_album_album_name: 'Al',
+        reason_start: 'clickrow',
+        spotify_track_uri: 'spotify:track:x',
+        ip_addr: '1.2.3.4',
+      },
+    ]);
+    expect(s.events[0]).toMatchObject({ reasonStart: 'clickrow', album: 'Al' });
+    expect(JSON.stringify(s.events[0])).not.toContain('1.2.3.4');
+    expect(JSON.stringify(s.events[0])).not.toContain('spotify:track');
   });
 });
