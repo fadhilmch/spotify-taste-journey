@@ -48,7 +48,9 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Explore' }));
     await user.click(screen.getByRole('button', { name: 'Habits' }));
     expect(screen.getByText('Your habits and discoveries')).toBeInTheDocument();
-    expect(screen.getAllByText(/First obsession/i).length).toBeGreaterThan(0);
+    // Artist chapters live in the Story, not here.
+    expect(screen.queryByText(/First obsession/i)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open the story' })).toBeInTheDocument();
     expect(screen.getByText(/Listening clock/i)).toBeInTheDocument();
     // Listening clock: a 24-hour dial; selecting an hour shows its share.
     expect(
