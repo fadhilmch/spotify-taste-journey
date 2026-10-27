@@ -161,4 +161,14 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Demo data' }));
     expect(screen.getByText('When you listen')).toBeInTheDocument();
   });
+
+  it('links a story chapter to its artist in the library', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getAllByRole('button', { name: /^Library: / })[0]);
+    expect(useAppStore.getState().view).toBe('artists');
+    expect(document.querySelector('.tj-artist-panel')).not.toBeNull();
+  });
 });
