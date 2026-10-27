@@ -85,6 +85,26 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
   const source = useAppStore((s) => s.source);
   const ranged = filterToMonths(aggs, rangeMonthKeys(months, range));
   const artists = topArtists(ranged, 12);
+  // Years each artist was heard, over all history (not just the range), counted from plays.
+  const span = React.useMemo(() => {
+    const m = new Map<string, [string, string]>();
+    for (const a of aggs) {
+      const cur = m.get(a.artist);
+      if (!cur) m.set(a.artist, [a.month, a.month]);
+      else {
+        if (a.month < cur[0]) cur[0] = a.month;
+        if (a.month > cur[1]) cur[1] = a.month;
+      }
+    }
+    return m;
+  }, [aggs]);
+  const years = (name: string) => {
+    const r = span.get(name);
+    if (!r) return '';
+    const a = r[0].slice(0, 4);
+    const b = r[1].slice(0, 4);
+    return a === b ? ` · heard in ${a}` : ` · heard ${a} to ${b}`;
+  };
   const libraryArtist = useAppStore((st) => st.libraryArtist);
   const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
   const [picked, setPicked] = React.useState<string | null>(libraryArtist);
@@ -117,7 +137,10 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
               <p className="tj-tile-name">
                 {i + 1}. {t.name}
               </p>
-              <p className="tj-tile-sub">{fmtMinutes(t.minutes)}</p>
+              <p className="tj-tile-sub">
+                {fmtMinutes(t.minutes)}
+                {years(t.name)}
+              </p>
             </button>
           </div>
         ))}
@@ -132,6 +155,12 @@ export function TracksView({ months, aggs }: { months: MonthBucket[]; aggs: Play
   const source = useAppStore((s) => s.source);
   const ranged = filterToMonths(aggs, rangeMonthKeys(months, range));
   const tracks = topTracks(ranged, 10);
+  const setView = useAppStore((st) => st.setView);
+  const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
+  const openArtist = (name: string) => {
+    setLibraryArtist(name);
+    setView('artists');
+  };
   const rangeLabel = { '4w': '4 weeks', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
 
   return (
@@ -152,7 +181,11 @@ export function TracksView({ months, aggs }: { months: MonthBucket[]; aggs: Play
             <span className="tj-thumb" style={{ background: artistBackground(t.artist) }} />
             <span className="tj-mini-name">
               {t.name}
-              <em>{t.artist}</em>
+              <em>
+                <button type="button" className="tj-linkbtn" onClick={() => openArtist(t.artist)}>
+                  {t.artist}
+                </button>
+              </em>
             </span>
             <span className="tj-mini-val">{fmtMinutes(t.minutes)}</span>
           </li>
