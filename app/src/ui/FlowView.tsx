@@ -98,6 +98,11 @@ function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number
           ))}
         </div>
       )}
+      {beat.kind === 'share' && (
+        <p className="tj-flow-legend">
+          <span>Top artist, top track and hours. Nothing leaves this device unless you save it.</span>
+        </p>
+      )}
       {beat.kind !== 'origins' && beat.kind !== 'share' && (
         <p className="tj-flow-legend">
           <span>Counted from your play timestamps.</span>
