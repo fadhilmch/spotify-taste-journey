@@ -62,9 +62,18 @@ function fmtBig(n: number): string {
   return Math.round(n).toLocaleString('en-US');
 }
 
+function barStyle(v: number, max: number, i: number): React.CSSProperties {
+  return { height: `${Math.max(2, (v / max) * 100)}%`, ['--i' as string]: i };
+}
+
 function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number; total: number }) {
   const max = Math.max(1, ...beat.values);
-  const stageClass = beat.values.length > 0 ? 'tj-flow-stage' : 'tj-flow-stage hero';
+  const stageClass =
+    beat.values.length > 0
+      ? 'tj-flow-stage'
+      : String(beat.big).length > 6
+        ? 'tj-flow-stage hero hero-text'
+        : 'tj-flow-stage hero';
   return (
     <div className={stageClass}>
       <p className="sr-only" role="status">
@@ -82,16 +91,18 @@ function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number
             <div key={i} className="tj-habit-col">
               <div
                 className={i === beat.peak ? 'tj-habit-bar peak' : 'tj-habit-bar'}
-                style={{ height: `${Math.max(2, (v / max) * 100)}%` }}
+                style={barStyle(v, max, i)}
               />
               <span className="tj-habit-lab">{beat.labels[i]}</span>
             </div>
           ))}
         </div>
       )}
-      <p className="tj-flow-legend">
-        <span>Counted from your play timestamps.</span>
-      </p>
+      {beat.kind !== 'origins' && beat.kind !== 'share' && (
+        <p className="tj-flow-legend">
+          <span>Counted from your play timestamps.</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -246,11 +257,11 @@ function MonthStrip({
       role="img"
       aria-label="Minutes played in every month. The months of the current chapter are highlighted."
     >
-      {bars.map((b) => (
+      {bars.map((b, i) => (
         <i
           key={b.k}
           className={any && b.k.slice(0, 4) >= lo && b.k.slice(0, 4) <= hi ? 'on' : undefined}
-          style={{ height: `${Math.max(4, b.h * 100)}%` }}
+          style={{ height: `${Math.max(4, b.h * 100)}%`, transitionDelay: `${Math.min(i, 40) * 8}ms` }}
         />
       ))}
     </div>
@@ -404,7 +415,12 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
           {active < nStory ? (
             <Stage story={story} active={active} total={total} />
           ) : (
-            <HabitStage beat={extras[active - nStory]} chapter={active + 1} total={total} />
+            <HabitStage
+              key={extras[active - nStory].id}
+              beat={extras[active - nStory]}
+              chapter={active + 1}
+              total={total}
+            />
           )}
           <div className="tj-flow-rail" role="group" aria-label="Chapters">
             {chapters.map((b, i) => (
