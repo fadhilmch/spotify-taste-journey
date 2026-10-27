@@ -1,6 +1,7 @@
 import React from 'react';
+import { buildHabitBeats, type HabitBeat } from '../data/habits';
 import { buildNarrative, type Narrative } from '../data/narrative';
-import type { PlayAggregate } from '../data/types';
+import type { PlayAggregate, PlayEvent } from '../data/types';
 import { useAppStore } from '../state/store';
 import { Button } from './primitives';
 
@@ -54,7 +55,42 @@ function fmtBig(n: number): string {
   return Math.round(n).toLocaleString('en-US');
 }
 
-function Stage({ story, active }: { story: Narrative; active: number }) {
+function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number; total: number }) {
+  const max = Math.max(1, ...beat.values);
+  return (
+    <div className="tj-flow-stage">
+      <p className="sr-only" role="status">
+        {beat.title}. {beat.big} {beat.unit}.
+      </p>
+      <p className="tj-flow-kicker">
+        Chapter {chapter} of {total}
+      </p>
+      <p className="tj-flow-big">
+        <span>{beat.big}</span> <small>{beat.unit}</small>
+      </p>
+      <div
+        className="tj-habit-bars"
+        role="img"
+        aria-label={`${beat.title}: minutes per bar. ${beat.caption}`}
+      >
+        {beat.values.map((v, i) => (
+          <div key={i} className="tj-habit-col">
+            <div
+              className={i === beat.peak ? 'tj-habit-bar peak' : 'tj-habit-bar'}
+              style={{ height: `${Math.max(2, (v / max) * 100)}%` }}
+            />
+            <span className="tj-habit-lab">{beat.labels[i]}</span>
+          </div>
+        ))}
+      </div>
+      <p className="tj-flow-legend">
+        <span>Minutes played, counted from play timestamps.</span>
+      </p>
+    </div>
+  );
+}
+
+function Stage({ story, active, total }: { story: Narrative; active: number; total: number }) {
   const { years, beats, series } = story;
   const n = years.length;
   const beat = beats[active];
@@ -85,7 +121,7 @@ function Stage({ story, active }: { story: Narrative; active: number }) {
         {beat.title}. {beat.big.toLocaleString('en-US')} {beat.unit}.
       </p>
       <p className="tj-flow-kicker">
-        Chapter {active + 1} of {beats.length}
+        Chapter {active + 1} of {total}
       </p>
       <p className="tj-flow-big">
         <span>{fmtBig(big)}</span> <small>{beat.unit}</small>
@@ -164,9 +200,14 @@ function Stage({ story, active }: { story: Narrative; active: number }) {
   );
 }
 
-export function FlowView({ aggs }: { aggs: PlayAggregate[] }) {
+export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: PlayEvent[] }) {
   const story = React.useMemo(() => buildNarrative(aggs), [aggs]);
+  const habits = React.useMemo(() => buildHabitBeats(events), [events]);
+  const nStory = story ? story.beats.length : 0;
+  const total = nStory + habits.length;
   const [active, setActive] = React.useState(0);
+  const storyFocus = useAppStore((st) => st.storyFocus);
+  const setStoryFocus = useAppStore((st) => st.setStoryFocus);
   const setView = useAppStore((st) => st.setView);
   const [playing, setPlaying] = React.useState(false);
   const sections = React.useRef<Array<HTMLElement | null>>([]);
@@ -199,7 +240,7 @@ export function FlowView({ aggs }: { aggs: PlayAggregate[] }) {
     if (!playing || !story) return;
     const t = setInterval(() => {
       setActive((cur) => {
-        if (cur >= story.beats.length - 1) {
+        if (cur >= total - 1) {
           setPlaying(false);
           return cur;
         }
@@ -208,82 +249,95 @@ export function FlowView({ aggs }: { aggs: PlayAggregate[] }) {
       });
     }, 6500);
     return () => clearInterval(t);
-  }, [playing, story, goTo]);
+  }, [playing, story, total, goTo]);
+
+  React.useEffect(() => {
+    if (!story || !storyFocus) return;
+    const i = story.beats.findIndex((b) => b.artists.includes(storyFocus));
+    setStoryFocus(null);
+    if (i >= 0) setTimeout(() => goTo(i), 50);
+  }, [story, storyFocus, goTo, setStoryFocus]);
 
   if (!story) return null;
   return (
-    <div className="tj-flow">
-      <div className="tj-flow-left">
-        <Stage story={story} active={active} />
-        <div className="tj-flow-rail" role="group" aria-label="Chapters">
-          {story.beats.map((b, i) => (
-            <button
-              key={b.id}
-              type="button"
-              className={i === active ? 'tj-flow-pip on' : 'tj-flow-pip'}
-              aria-current={i === active ? 'step' : undefined}
+    <>
+      <div className="tj-flow">
+        <div className="tj-flow-left">
+          {active < nStory ? (
+            <Stage story={story} active={active} total={total} />
+          ) : (
+            <HabitStage beat={habits[active - nStory]} chapter={active + 1} total={total} />
+          )}
+          <div className="tj-flow-rail" role="group" aria-label="Chapters">
+            {[...story.beats, ...habits].map((b, i) => (
+              <button
+                key={b.id}
+                type="button"
+                className={i === active ? 'tj-flow-pip on' : 'tj-flow-pip'}
+                aria-current={i === active ? 'step' : undefined}
+                onClick={() => {
+                  setPlaying(false);
+                  goTo(i);
+                }}
+              >
+                <span className="tj-flow-pipdot" />
+                {b.label}
+              </button>
+            ))}
+            <Button
+              variant="ghost"
+              className="tj-flow-play"
               onClick={() => {
-                setPlaying(false);
-                goTo(i);
+                if (!playing && active >= total - 1) goTo(0);
+                setPlaying(!playing);
               }}
             >
-              <span className="tj-flow-pipdot" />
-              {b.label}
-            </button>
-          ))}
-          <Button
-            variant="ghost"
-            className="tj-flow-play"
-            onClick={() => {
-              if (!playing && active >= story.beats.length - 1) goTo(0);
-              setPlaying(!playing);
-            }}
-          >
-            {playing ? 'Pause story' : 'Play story'}
-          </Button>
-        </div>
-      </div>
-      <ol className="tj-flow-chapters">
-        {story.beats.map((b, i) => (
-          <li
-            key={b.id}
-            ref={(el) => {
-              sections.current[i] = el;
-            }}
-            data-beat={i}
-            className={i === active ? 'tj-flow-chapter on' : 'tj-flow-chapter'}
-          >
-            <h3>{b.title}</h3>
-            <p>{b.caption}</p>
-          </li>
-        ))}
-        <li className="tj-flow-end">
-          <div className="tj-flow-next" role="group" aria-label="Keep going">
-            <p className="tj-flow-next-title">Keep going</p>
-            <div className="tj-flow-next-links">
-              <Button variant="ghost" onClick={() => setView('rediscover')}>
-                Rediscover artists you left
-              </Button>
-              <Button variant="ghost" onClick={() => setView('journey')}>
-                See every month
-              </Button>
-              <Button variant="ghost" onClick={() => setView('artists')}>
-                Open your library
-              </Button>
-              <Button variant="ghost" onClick={() => setView('map')}>
-                Where artists come from (optional)
-              </Button>
-              <Button variant="ghost" onClick={() => setView('share')}>
-                Make a share card
-              </Button>
-            </div>
+              {playing ? 'Pause story' : 'Play story'}
+            </Button>
           </div>
-          <p className="tj-note">
-            Hours are minutes played divided by 60, summed from your plays. Chapters follow who led each year;
-            nothing here says why your listening changed. Years marked * are partly covered.
-          </p>
-        </li>
-      </ol>
-    </div>
+        </div>
+        <ol className="tj-flow-chapters">
+          {[...story.beats, ...habits].map((b, i) => (
+            <li
+              key={b.id}
+              ref={(el) => {
+                sections.current[i] = el;
+              }}
+              data-beat={i}
+              className={i === active ? 'tj-flow-chapter on' : 'tj-flow-chapter'}
+            >
+              <h3>{b.title}</h3>
+              <p>{b.caption}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div className="tj-flow-end">
+        <div className="tj-flow-next" role="group" aria-label="Keep going">
+          <p className="tj-flow-next-title">Keep going</p>
+          <div className="tj-flow-next-links">
+            <Button variant="ghost" onClick={() => setView('rediscover')}>
+              Rediscover artists you left
+            </Button>
+            <Button variant="ghost" onClick={() => setView('journey')}>
+              See every month
+            </Button>
+            <Button variant="ghost" onClick={() => setView('artists')}>
+              Open your library
+            </Button>
+            <Button variant="ghost" onClick={() => setView('map')}>
+              Where artists come from (optional)
+            </Button>
+            <Button variant="ghost" onClick={() => setView('share')}>
+              Make a share card
+            </Button>
+          </div>
+        </div>
+        <p className="tj-note">
+          Hours are minutes played divided by 60, summed from your plays. Chapters follow who led each year;
+          nothing here says why your listening changed. Years marked * are partly covered.
+        </p>
+      </div>
+    </>
   );
 }
