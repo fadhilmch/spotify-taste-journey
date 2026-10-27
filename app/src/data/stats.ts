@@ -421,3 +421,159 @@ export function chapters(months: MonthBucket[], aggs: PlayAggregate[]): Chapter[
     };
   });
 }
+
+const LONG_MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+/** "2024-03-05T..." -> "March 2024" without any time zone shift. */
+export function monthYearOf(ts: string): string {
+  const m = Number(ts.slice(5, 7));
+  return `${LONG_MONTHS[m - 1] ?? ts.slice(5, 7)} ${ts.slice(0, 4)}`;
+}
+
+const byTime = (a: PlayEvent, b: PlayEvent) => new Date(a.ts).getTime() - new Date(b.ts).getTime();
+
+export interface LoopStats {
+  /** Runs of the same track played back to back, `minRun` plays or more, each within `gapMin` of the last. */
+  runs: number;
+  longest: { count: number; artist: string; track: string; endMonth: string } | null;
+  byYear: Array<{ year: string; runs: number }>;
+}
+
+export function loopStats(events: PlayEvent[], minRun = 5, gapMin = 30): LoopStats {
+  const sorted = events.filter((e) => !Number.isNaN(new Date(e.ts).getTime())).sort(byTime);
+  const byYear = new Map<string, number>();
+  let runs = 0;
+  let longest: LoopStats['longest'] = null;
+  let start = 0;
+  const close = (end: number) => {
+    const count = end - start;
+    if (count < minRun) return;
+    runs += 1;
+    const first = sorted[start];
+    const last = sorted[end - 1];
+    const y = first.ts.slice(0, 4);
+    byYear.set(y, (byYear.get(y) ?? 0) + 1);
+    if (!longest || count > longest.count) {
+      longest = { count, artist: first.artist, track: first.track, endMonth: monthYearOf(last.ts) };
+    }
+  };
+  for (let i = 1; i <= sorted.length; i += 1) {
+    const prev = sorted[i - 1];
+    const cur = sorted[i];
+    const same =
+      cur !== undefined &&
+      cur.artist === prev.artist &&
+      cur.track === prev.track &&
+      new Date(cur.ts).getTime() - new Date(prev.ts).getTime() <= gapMin * 60000;
+    if (!same) {
+      close(i);
+      start = i;
+    }
+  }
+  const ys = [...byYear.keys()].sort();
+  const filled: Array<{ year: string; runs: number }> = [];
+  if (ys.length > 0) {
+    for (let y = Number(ys[0]); y <= Number(ys[ys.length - 1]); y += 1) {
+      filled.push({ year: String(y), runs: byYear.get(String(y)) ?? 0 });
+    }
+  }
+  return { runs, longest, byYear: filled };
+}
+
+export interface AlbumStats {
+  /** Distinct artist + album pairs. */
+  albums: number;
+  /** Albums where `minTracks` or more different tracks were played. */
+  wide: number;
+  top: Array<{ artist: string; album: string; tracks: number; minutes: number }>;
+  /** Per year: albums with `minTracks`+ different tracks played in that year. */
+  byYear: Array<{ year: string; wide: number }>;
+}
+
+export function albumStats(events: PlayEvent[], minTracks = 8): AlbumStats {
+  const all = new Map<string, { artist: string; album: string; tracks: Set<string>; ms: number }>();
+  const perYear = new Map<string, Map<string, Set<string>>>();
+  for (const e of events) {
+    if (!e.album) continue;
+    const key = `${e.artist}\u0000${e.album}`;
+    const cur = all.get(key) ?? { artist: e.artist, album: e.album, tracks: new Set<string>(), ms: 0 };
+    cur.tracks.add(e.track);
+    cur.ms += e.ms;
+    all.set(key, cur);
+    const y = e.ts.slice(0, 4);
+    const ym = perYear.get(y) ?? new Map<string, Set<string>>();
+    const set = ym.get(key) ?? new Set<string>();
+    set.add(e.track);
+    ym.set(key, set);
+    perYear.set(y, ym);
+  }
+  const wideList = [...all.values()].filter((v) => v.tracks.size >= minTracks);
+  const top = wideList
+    .sort((a, b) => b.ms - a.ms || a.album.localeCompare(b.album))
+    .slice(0, 3)
+    .map((v) => ({
+      artist: v.artist,
+      album: v.album,
+      tracks: v.tracks.size,
+      minutes: Math.round(v.ms / 60000),
+    }));
+  const byYear = [...perYear.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([year, m]) => ({ year, wide: [...m.values()].filter((t) => t.size >= minTracks).length }));
+  return { albums: all.size, wide: wideList.length, top, byYear };
+}
+
+export interface StartStats {
+  hasStarts: boolean;
+  /** Shares of plays, 0..1. Chosen = clickrow, playbtn or backbtn. */
+  chosen: number;
+  carried: number;
+  forward: number;
+  byYear: Array<{ year: string; plays: number; rate: number }>;
+}
+
+export const isChosenStart = (r: string | null): boolean =>
+  r === 'clickrow' || r === 'playbtn' || r === 'backbtn';
+
+export function startStats(events: PlayEvent[]): StartStats {
+  const known = events.filter((e) => e.reasonStart !== null);
+  if (known.length === 0) return { hasStarts: false, chosen: 0, carried: 0, forward: 0, byYear: [] };
+  const yr = new Map<string, { plays: number; chosen: number }>();
+  let chosen = 0;
+  let carried = 0;
+  let forward = 0;
+  for (const e of known) {
+    const c = isChosenStart(e.reasonStart);
+    if (c) chosen += 1;
+    else if (e.reasonStart === 'trackdone') carried += 1;
+    else if (e.reasonStart === 'fwdbtn') forward += 1;
+    const y = e.ts.slice(0, 4);
+    const cur = yr.get(y) ?? { plays: 0, chosen: 0 };
+    cur.plays += 1;
+    if (c) cur.chosen += 1;
+    yr.set(y, cur);
+  }
+  const n = known.length;
+  return {
+    hasStarts: true,
+    chosen: chosen / n,
+    carried: carried / n,
+    forward: forward / n,
+    byYear: [...yr.entries()]
+      .filter(([, v]) => v.plays >= 100)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([year, v]) => ({ year, plays: v.plays, rate: v.chosen / v.plays })),
+  };
+}

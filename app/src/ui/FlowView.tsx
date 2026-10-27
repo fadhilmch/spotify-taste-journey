@@ -105,16 +105,19 @@ function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number
       )}
       {beat.kind !== 'origins' && beat.kind !== 'share' && (
         <p className="tj-flow-legend">
-          <span>
-            {beat.id === 'habit-skips'
-              ? 'Counted from how each play ended.'
-              : 'Counted from your play timestamps.'}
-          </span>
+          <span>{LEGENDS[beat.id] ?? 'Counted from your play timestamps.'}</span>
         </p>
       )}
     </div>
   );
 }
+
+const LEGENDS: Record<string, string> = {
+  'habit-skips': 'Counted from how each play ended.',
+  'habit-picks': 'Counted from how each play began.',
+  'habit-loops': 'Counted from play order and timestamps.',
+  'habit-albums': 'Counted from album names on your plays.',
+};
 
 function Stage({ story, active, total }: { story: Narrative; active: number; total: number }) {
   const { years, beats, series } = story;
