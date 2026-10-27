@@ -64,8 +64,9 @@ function fmtBig(n: number): string {
 
 function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number; total: number }) {
   const max = Math.max(1, ...beat.values);
+  const stageClass = beat.values.length > 0 ? 'tj-flow-stage' : 'tj-flow-stage hero';
   return (
-    <div className={beat.values.length > 0 ? 'tj-flow-stage' : 'tj-flow-stage hero'}>
+    <div className={stageClass}>
       <p className="sr-only" role="status">
         {beat.title}. {beat.big} {beat.unit}.
       </p>
