@@ -200,4 +200,16 @@ describe('App', () => {
     expect(document.querySelector('[data-beat] .tj-flow-links')).not.toBeNull();
     expect(useAppStore.getState().artistChapter).not.toBeNull();
   });
+
+  it('labels an artist-start share card as the chapter artist, not the top artist', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    useAppStore.getState().setShareFocus('Senja Radio');
+    await user.click(screen.getByRole('button', { name: 'Share' }));
+    expect(screen.getByRole('checkbox', { name: 'Chapter artist' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Top artist' })).toBeNull();
+    expect(screen.getByText(/covers that artist over all time/)).toBeInTheDocument();
+  });
 });
