@@ -1287,11 +1287,28 @@
     top: 16px;
     /* Leave room for the fixed player bar so the stage is never covered. */
     max-height: calc(100vh - 110px);
+    /* One height for every chapter, so the stage does not jump as the content changes. */
+    min-height: min(600px, calc(100vh - 110px));
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 16px;
     padding: 18px 18px 12px;
+  }
+  .tj-flow-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  /* A chapter with no chart: let the number be the picture instead of leaving an empty card. */
+  .tj-flow-stage.hero {
+    justify-content: center;
+  }
+  .tj-flow-stage.hero .tj-flow-big {
+    font-size: clamp(52px, 9vw, 92px);
+    margin: 6px 0 10px;
   }
   .tj-flow-kicker {
     margin: 0;
@@ -1365,7 +1382,7 @@
     flex-wrap: wrap;
     gap: 2px;
     align-items: center;
-    margin-top: 10px;
+    margin-top: auto;
     padding-top: 8px;
     border-top: 1px solid var(--line);
   }
@@ -1469,8 +1486,13 @@
       grid-template-columns: minmax(0, 1fr);
       gap: 8px;
     }
+    .tj-flow-stage.hero .tj-flow-big {
+      font-size: 28px;
+      margin: 2px 0;
+    }
     .tj-flow-left {
       top: 0;
+      min-height: 0;
       z-index: 2;
       padding: 10px 12px 6px;
       border-radius: 0 0 16px 16px;
