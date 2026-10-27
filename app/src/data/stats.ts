@@ -193,24 +193,29 @@ export function weekdayHistogram(events: PlayEvent[]): number[] {
 }
 
 export interface SkipStats {
-  /** False when the file carries no skipped flags at all (legacy exports). */
-  hasFlags: boolean;
-  /** Share of flagged plays that were skipped, 0..1. */
+  /** False when no play carries how it ended (older exports), so nothing is guessed. */
+  hasEnds: boolean;
+  /** Share of plays whose recorded ending is the forward button, 0..1. */
   rate: number;
   byArtist: Array<{ artist: string; plays: number; skipRate: number }>;
 }
 
+/** A play "moved on" when its recorded ending is the forward button. This is not Spotify's skipped flag. */
+export function endedOnForward(e: PlayEvent): boolean {
+  return e.reasonEnd === 'fwdbtn';
+}
+
 export function skipStats(events: PlayEvent[]): SkipStats {
-  const flagged = events.filter((e) => e.skipped !== null);
-  if (flagged.length === 0) return { hasFlags: false, rate: 0, byArtist: [] };
-  let skips = 0;
+  const known = events.filter((e) => e.reasonEnd !== null);
+  if (known.length === 0) return { hasEnds: false, rate: 0, byArtist: [] };
+  let moved = 0;
   const by = new Map<string, { plays: number; skips: number }>();
-  for (const e of flagged) {
+  for (const e of known) {
     const cur = by.get(e.artist) ?? { plays: 0, skips: 0 };
     cur.plays += 1;
-    if (e.skipped) {
+    if (endedOnForward(e)) {
       cur.skips += 1;
-      skips += 1;
+      moved += 1;
     }
     by.set(e.artist, cur);
   }
@@ -218,7 +223,45 @@ export function skipStats(events: PlayEvent[]): SkipStats {
     .filter(([, v]) => v.plays >= 20)
     .map(([artist, v]) => ({ artist, plays: v.plays, skipRate: v.skips / v.plays }))
     .sort((a, b) => b.skipRate - a.skipRate || b.plays - a.plays || a.artist.localeCompare(b.artist));
-  return { hasFlags: true, rate: skips / flagged.length, byArtist };
+  return { hasEnds: true, rate: moved / known.length, byArtist };
+}
+
+/** Forward-button share per calendar year; years with under 100 plays that carry an ending are left out. */
+export function forwardByYear(events: PlayEvent[]): Array<{ year: string; plays: number; rate: number }> {
+  const by = new Map<string, { plays: number; fwd: number }>();
+  for (const e of events) {
+    if (e.reasonEnd === null) continue;
+    const y = e.ts.slice(0, 4);
+    const cur = by.get(y) ?? { plays: 0, fwd: 0 };
+    cur.plays += 1;
+    if (endedOnForward(e)) cur.fwd += 1;
+    by.set(y, cur);
+  }
+  return [...by.entries()]
+    .filter(([, v]) => v.plays >= 100)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([year, v]) => ({ year, plays: v.plays, rate: v.fwd / v.plays }));
+}
+
+/**
+ * Years where Spotify's own skipped flag is present on 100+ plays but never true, while the same plays
+ * do record forward-button endings. The flag and the endings disagree there, so the flag is not used.
+ */
+export function skipFlagGapYears(events: PlayEvent[]): string[] {
+  const by = new Map<string, { flagged: number; flagTrue: number; fwd: number }>();
+  for (const e of events) {
+    if (e.skipped === null) continue;
+    const y = e.ts.slice(0, 4);
+    const cur = by.get(y) ?? { flagged: 0, flagTrue: 0, fwd: 0 };
+    cur.flagged += 1;
+    if (e.skipped) cur.flagTrue += 1;
+    if (endedOnForward(e)) cur.fwd += 1;
+    by.set(y, cur);
+  }
+  return [...by.entries()]
+    .filter(([, v]) => v.flagged >= 100 && v.flagTrue === 0 && v.fwd > 0)
+    .map(([y]) => y)
+    .sort();
 }
 
 export interface DiscoveryStats {

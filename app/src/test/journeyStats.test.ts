@@ -5,6 +5,8 @@ import {
   hourHistogram,
   mixStats,
   sessions,
+  forwardByYear,
+  skipFlagGapYears,
   skipStats,
   weekdayHistogram,
 } from '../data/stats';
@@ -43,20 +45,51 @@ describe('hour/weekday histograms', () => {
 });
 
 describe('skipStats', () => {
-  it('reports hasFlags=false when no row carries a skipped flag', () => {
-    const s = skipStats([ev({ skipped: null }), ev({ skipped: null })]);
-    expect(s.hasFlags).toBe(false);
+  it('reports hasEnds=false when no row records how it ended', () => {
+    const s = skipStats([ev({ reasonEnd: null }), ev({ reasonEnd: null })]);
+    expect(s.hasEnds).toBe(false);
   });
   it('computes overall and per-artist skip rates with a 20-play floor', () => {
     const events: PlayEvent[] = [];
-    for (let i = 0; i < 30; i++) events.push(ev({ artist: 'SkipMe', skipped: i < 6 }));
-    for (let i = 0; i < 5; i++) events.push(ev({ artist: 'SmallSample', skipped: true }));
+    for (let i = 0; i < 30; i++)
+      events.push(ev({ artist: 'SkipMe', reasonEnd: i < 6 ? 'fwdbtn' : 'trackdone' }));
+    for (let i = 0; i < 5; i++) events.push(ev({ artist: 'SmallSample', reasonEnd: 'fwdbtn' }));
     const s = skipStats(events);
-    expect(s.hasFlags).toBe(true);
+    expect(s.hasEnds).toBe(true);
     expect(s.rate).toBeCloseTo(11 / 35, 5);
     expect(s.byArtist).toHaveLength(1);
     expect(s.byArtist[0]).toMatchObject({ artist: 'SkipMe', plays: 30 });
     expect(s.byArtist[0].skipRate).toBeCloseTo(0.2, 5);
+  });
+});
+
+describe('forward-button measure by year', () => {
+  const year = (y: string, n: number, fwd: number, flag: boolean | null) =>
+    Array.from({ length: n }, (_, i) =>
+      ev({
+        ts: `${y}-05-01T10:00:00Z`,
+        reasonEnd: i < fwd ? 'fwdbtn' : 'trackdone',
+        skipped: flag === null ? null : flag && i < fwd,
+      }),
+    );
+  it('counts forward-button endings per year and drops years under 100 plays', () => {
+    const rows = [
+      ...year('2019', 200, 40, false),
+      ...year('2020', 150, 90, true),
+      ...year('2021', 50, 10, true),
+    ];
+    const r = forwardByYear(rows);
+    expect(r.map((x) => x.year)).toEqual(['2019', '2020']);
+    expect(r[0].rate).toBeCloseTo(0.2, 5);
+    expect(r[1].rate).toBeCloseTo(0.6, 5);
+  });
+  it('flags years where the skipped flag is never true although forward endings exist', () => {
+    const rows = [
+      ...year('2019', 200, 40, false),
+      ...year('2020', 150, 90, true),
+      ...year('2021', 120, 0, false),
+    ];
+    expect(skipFlagGapYears(rows)).toEqual(['2019']);
   });
 });
 
@@ -185,7 +218,7 @@ describe('demo fixtures', () => {
   it('demo events carry skip/shuffle/platform flags for the deeper stats', () => {
     const events = buildDemoEvents();
     expect(events.length).toBeGreaterThan(500);
-    expect(skipStats(events).hasFlags).toBe(true);
+    expect(skipStats(events).hasEnds).toBe(true);
     const m = mixStats(events);
     expect(m.shuffleShare).not.toBeNull();
     expect(m.platforms.length).toBeGreaterThan(2);

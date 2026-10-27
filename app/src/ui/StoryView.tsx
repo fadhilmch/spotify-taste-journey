@@ -318,10 +318,10 @@ export function StoryView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
         id="tj-skip-h"
         title="Skips and sessions"
         aside={
-          skips.hasFlags ? <CardAside>{Math.round(skips.rate * 100)}% of plays skipped</CardAside> : undefined
+          skips.hasEnds ? <CardAside>{Math.round(skips.rate * 100)}% ended on forward</CardAside> : undefined
         }
       >
-        {skips.hasFlags ? (
+        {skips.hasEnds ? (
           <>
             {skips.byArtist.length > 0 && (
               <ol className="tj-mini">
@@ -330,19 +330,20 @@ export function StoryView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
                     <span className="tj-rank">{i + 1}</span>
                     <span className="tj-thumb" style={{ background: artistBackground(a.artist) }} />
                     <span className="tj-mini-name">{a.artist}</span>
-                    <span className="tj-mini-val">{Math.round(a.skipRate * 100)}% skipped</span>
+                    <span className="tj-mini-val">{Math.round(a.skipRate * 100)}% forward</span>
                   </li>
                 ))}
               </ol>
             )}
             <p className="tj-note">
-              Skipped is Spotify&apos;s own flag on each play; only artists with 20+ flagged plays are ranked.
+              Forward means the play&apos;s recorded ending is the forward button; only artists with 20+ plays
+              are ranked.
             </p>
           </>
         ) : (
           <p className="tj-note">
-            This file carries no skip flags (older exports don&apos;t), so skip stats stay blank rather than
-            guessed.
+            This file doesn&apos;t record how plays ended (older exports don&apos;t), so forward-button stats
+            stay blank rather than guessed.
           </p>
         )}
         {sess.count > 0 && (

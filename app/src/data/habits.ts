@@ -1,4 +1,13 @@
-import { discoveries, hourHistogram, sessions, skipStats, weekdayHistogram } from './stats';
+import {
+  discoveries,
+  endedOnForward,
+  forwardByYear,
+  hourHistogram,
+  sessions,
+  skipFlagGapYears,
+  skipStats,
+  weekdayHistogram,
+} from './stats';
 import { artistFacts } from './artistFacts';
 import { rediscoveries } from './rediscovery';
 import type { PlayAggregate, PlayEvent } from './types';
@@ -80,30 +89,58 @@ export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = [])
     });
   }
   const sk = skipStats(events);
-  if (sk.hasFlags) {
-    const flagged = events.filter((e) => e.skipped !== null);
-    const plays = new Array<number>(24).fill(0);
-    const skips = new Array<number>(24).fill(0);
-    for (const e of flagged) {
-      const d = new Date(e.ts);
-      if (Number.isNaN(d.getTime())) continue;
-      plays[d.getHours()] += 1;
-      if (e.skipped) skips[d.getHours()] += 1;
+  if (sk.hasEnds) {
+    const byYear = forwardByYear(events);
+    const gap = skipFlagGapYears(events);
+    const gapNote =
+      gap.length > 0
+        ? ` Spotify's own skipped flag reads zero for ${gap.length > 1 ? `${gap[0]} to ${gap[gap.length - 1]}` : gap[0]} in this file, even though forward-button endings are recorded then, so the flag is not used here.`
+        : '';
+    const pctOf = (r: number): number => Math.round(r * 100);
+    if (byYear.length >= 2) {
+      const first = byYear[0];
+      const last = byYear[byYear.length - 1];
+      const rates = byYear.map((y) => pctOf(y.rate));
+      const top = byYear[argMax(rates)];
+      const arcText =
+        top === first || top === last
+          ? `It went from ${pctOf(first.rate)}% in ${first.year} to ${pctOf(last.rate)}% in ${last.year}.`
+          : `It was ${pctOf(first.rate)}% in ${first.year}, highest in ${top.year} at ${pctOf(top.rate)}%, and ${pctOf(last.rate)}% in ${last.year}.`;
+      beats.push({
+        id: 'habit-skips',
+        label: 'Forward',
+        title: 'When you press forward',
+        big: `${pctOf(sk.rate)}%`,
+        unit: 'of plays ended on the forward button',
+        caption: `A play counts when its recorded ending is the forward button; that includes moving on from a track you had already heard most of. ${arcText} Bars show each year, from 100 plays up.${gapNote}`,
+        values: rates,
+        labels: byYear.map((y) => y.year.slice(2)),
+        peak: argMax(rates),
+      });
+    } else {
+      const plays = new Array<number>(24).fill(0);
+      const moved = new Array<number>(24).fill(0);
+      for (const e of events) {
+        if (e.reasonEnd === null) continue;
+        const d = new Date(e.ts);
+        if (Number.isNaN(d.getTime())) continue;
+        plays[d.getHours()] += 1;
+        if (endedOnForward(e)) moved[d.getHours()] += 1;
+      }
+      // Hours with fewer than 20 plays are left empty: too few to compare.
+      const rates = plays.map((n, i) => (n >= 20 ? pctOf(moved[i] / n) : 0));
+      beats.push({
+        id: 'habit-skips',
+        label: 'Forward',
+        title: 'When you press forward',
+        big: `${pctOf(sk.rate)}%`,
+        unit: 'of plays ended on the forward button',
+        caption: `A play counts when its recorded ending is the forward button. Bars show that share per hour of day; hours with under 20 plays are left empty.${gapNote}`,
+        values: rates,
+        labels: rates.map((_, i) => (i % 6 === 0 ? String(i) : '')),
+        peak: rates.some((r) => r > 0) ? argMax(rates) : -1,
+      });
     }
-    // Hours with fewer than 20 flagged plays are left empty: too few to compare.
-    const rates = plays.map((n, i) => (n >= 20 ? Math.round((skips[i] / n) * 100) : 0));
-    beats.push({
-      id: 'habit-skips',
-      label: 'Skips',
-      title: 'What you skip',
-      big: `${Math.round(sk.rate * 100)}%`,
-      unit: 'of plays were skipped',
-      caption:
-        "This uses Spotify's own skipped flag. Bars show the skip share per hour of day; hours with under 20 flagged plays are left empty.",
-      values: rates,
-      labels: rates.map((_, i) => (i % 6 === 0 ? String(i) : '')),
-      peak: rates.some((r) => r > 0) ? argMax(rates) : -1,
-    });
   }
   if (aggs.length > 0) {
     const dis = discoveries(aggs);
