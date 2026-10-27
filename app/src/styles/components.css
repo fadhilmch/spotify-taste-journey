@@ -1310,6 +1310,11 @@
     font-size: clamp(52px, 9vw, 92px);
     margin: 6px 0 10px;
   }
+  .tj-scope {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: var(--txt-2);
+  }
   .tj-flow-kicker {
     margin: 0;
     font-size: 11px;
