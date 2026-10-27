@@ -105,6 +105,45 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
     const b = r[1].slice(0, 4);
     return a === b ? ` · heard in ${a}` : ` · heard ${a} to ${b}`;
   };
+  // Minutes per month for each artist over the whole history, so every tile's line shares one time axis.
+  const series = React.useMemo(() => {
+    const keys = months.map((m) => m.key);
+    const pos = new Map(keys.map((k, i) => [k, i]));
+    const out = new Map<string, number[]>();
+    for (const a of aggs) {
+      const i = pos.get(a.month);
+      if (i === undefined) continue;
+      let row = out.get(a.artist);
+      if (!row) {
+        row = new Array<number>(keys.length).fill(0);
+        out.set(a.artist, row);
+      }
+      row[i] += a.ms / 60000;
+    }
+    return out;
+  }, [aggs, months]);
+  const spark = (name: string) => {
+    const row = series.get(name);
+    if (!row || row.length < 2) return null;
+    const max = Math.max(1, ...row);
+    const d = row
+      .map(
+        (v, k) =>
+          `${k ? 'L' : 'M'}${((k * 100) / (row.length - 1)).toFixed(1)} ${(15 - (v / max) * 14).toFixed(1)}`,
+      )
+      .join(' ');
+    return (
+      <svg
+        className="tj-tile-spark"
+        viewBox="0 0 100 16"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={`Minutes per month for ${name}, whole history`}
+      >
+        <path d={d} vectorEffect="non-scaling-stroke" />
+      </svg>
+    );
+  };
   const libraryArtist = useAppStore((st) => st.libraryArtist);
   const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
   const [picked, setPicked] = React.useState<string | null>(libraryArtist);
@@ -141,6 +180,7 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
                 {fmtMinutes(t.minutes)}
                 {years(t.name)}
               </p>
+              {spark(t.name)}
             </button>
           </div>
         ))}
