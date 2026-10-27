@@ -312,6 +312,22 @@
     opacity: 0.6;
     font-size: 13px;
   }
+  button.tj-flow-locked-btn,
+  .tj-flow-locked button {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .tj-flow-locked button:focus-visible {
+    outline: 2px solid #1ed760;
+  }
   .tj-flow-notice {
     padding: 12px;
     border-radius: 12px;
