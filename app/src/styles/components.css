@@ -273,6 +273,30 @@
     color: var(--txt-2);
     white-space: nowrap;
   }
+  .tj-strip {
+    display: flex;
+    align-items: flex-end;
+    gap: 1px;
+    height: 34px;
+    margin-bottom: 8px;
+  }
+  .tj-strip i {
+    flex: 1 1 0;
+    background: var(--txt-2);
+    opacity: 0.3;
+    border-radius: 1px;
+    transition: opacity 0.4s ease;
+  }
+  .tj-strip i.on {
+    background: #1ed760;
+    opacity: 1;
+  }
+  .tj-flow-notice {
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(245, 196, 81, 0.35);
+    background: rgba(245, 196, 81, 0.06);
+  }
   .tj-flow-links {
     margin-top: 10px;
   }
