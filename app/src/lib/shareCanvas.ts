@@ -73,11 +73,11 @@ export function renderShareCard(canvas: HTMLCanvasElement, data: ShareCardData, 
     ctx.fillStyle = '#ffffff';
     ctx.font = `900 ${size}px Nunito, system-ui, sans-serif`;
     ctx.fillText(data.focus.name, pad, y + size);
-    y += size + 50;
+    y += size + 70;
     ctx.fillStyle = '#ffffffe0';
-    ctx.font = '700 38px Nunito, system-ui, sans-serif';
+    ctx.font = '700 32px Nunito, system-ui, sans-serif';
     ctx.fillText(focusLine(data.focus), pad, y, W - pad * 2);
-    y += 80;
+    y += 100;
   } else if (bits.artist && data.topArtist) {
     ctx.fillStyle = '#ffffff99';
     ctx.font = '700 32px Nunito, system-ui, sans-serif';
@@ -93,7 +93,7 @@ export function renderShareCard(canvas: HTMLCanvasElement, data: ShareCardData, 
     ctx.fillStyle = '#ffffff99';
     ctx.font = '700 30px Nunito, system-ui, sans-serif';
     ctx.fillText(`ACROSS ALL YOUR LISTENING - ${data.rangeLabel.toUpperCase()}`, pad, y);
-    y += 56;
+    y += 70;
   }
   ctx.fillStyle = '#ffffffe0';
   ctx.font = '700 44px Nunito, system-ui, sans-serif';
