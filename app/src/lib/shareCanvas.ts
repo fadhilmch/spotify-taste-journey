@@ -52,7 +52,8 @@ export function renderShareCard(canvas: HTMLCanvasElement, data: ShareCardData, 
   ctx.font = '700 34px Nunito, system-ui, sans-serif';
   ctx.textBaseline = 'alphabetic';
   ctx.fillText(`MY TASTE JOURNEY - ${data.rangeLabel.toUpperCase()}`, pad, y);
-  y += 110;
+  // The artist sits in the upper-middle of the card; the figures are anchored above the footer.
+  y = 400;
 
   const fit = (text: string, maxWidth: number, start: number): number => {
     let size = start;
@@ -69,7 +70,7 @@ export function renderShareCard(canvas: HTMLCanvasElement, data: ShareCardData, 
     ctx.font = '700 32px Nunito, system-ui, sans-serif';
     ctx.fillText('Chapter artist', pad, y);
     y += 34;
-    const size = fit(data.focus.name, W - pad * 2, 116);
+    const size = fit(data.focus.name, W - pad * 2, 150);
     ctx.fillStyle = '#ffffff';
     ctx.font = `900 ${size}px Nunito, system-ui, sans-serif`;
     ctx.fillText(data.focus.name, pad, y + size);
@@ -77,40 +78,41 @@ export function renderShareCard(canvas: HTMLCanvasElement, data: ShareCardData, 
     ctx.fillStyle = '#ffffffe0';
     ctx.font = '700 32px Nunito, system-ui, sans-serif';
     ctx.fillText(focusLine(data.focus), pad, y, W - pad * 2);
-    y += 100;
   } else if (bits.artist && data.topArtist) {
     ctx.fillStyle = '#ffffff99';
     ctx.font = '700 32px Nunito, system-ui, sans-serif';
     ctx.fillText('Top artist', pad, y);
     y += 34;
-    const size = fit(data.topArtist, W - pad * 2, 116);
+    const size = fit(data.topArtist, W - pad * 2, 150);
     ctx.fillStyle = '#ffffff';
     ctx.font = `900 ${size}px Nunito, system-ui, sans-serif`;
     ctx.fillText(data.topArtist, pad, y + size);
-    y += size + 70;
   }
-  if (data.focus && (bits.track || bits.minutes || bits.genre)) {
+  const lines: string[] = [];
+  if (bits.track && data.topTrack) lines.push(`"${data.topTrack.name}" - ${data.topTrack.artist}`);
+  if (bits.minutes) lines.push(`${fmtCardMinutes(data.totalMinutes)} listened`);
+  if (bits.genre && data.topGenre) lines.push(`Top genre: ${data.topGenre}`);
+  if (bits.eras) lines.push(`${data.eraCount} artist eras`);
+  const label =
+    data.focus && lines.length > 0 ? `ACROSS ALL YOUR LISTENING - ${data.rangeLabel.toUpperCase()}` : null;
+  // Block height: optional label, then one 72 px row per line; its last baseline sits 130 px above the footer.
+  const blockTop = H - pad - 130 - (lines.length > 0 ? (lines.length - 1) * 72 : 0) - (label ? 70 : 0);
+  if (lines.length > 0) {
+    ctx.fillStyle = '#ffffff22';
+    ctx.fillRect(pad, blockTop - 70, W - pad * 2, 2);
+  }
+  let ys = blockTop;
+  if (label) {
     ctx.fillStyle = '#ffffff99';
     ctx.font = '700 30px Nunito, system-ui, sans-serif';
-    ctx.fillText(`ACROSS ALL YOUR LISTENING - ${data.rangeLabel.toUpperCase()}`, pad, y);
-    y += 70;
+    ctx.fillText(label, pad, ys);
+    ys += 70;
   }
   ctx.fillStyle = '#ffffffe0';
   ctx.font = '700 44px Nunito, system-ui, sans-serif';
-  if (bits.track && data.topTrack) {
-    ctx.fillText(`"${data.topTrack.name}" - ${data.topTrack.artist}`, pad, y, W - pad * 2);
-    y += 72;
-  }
-  if (bits.minutes) {
-    ctx.fillText(`${fmtCardMinutes(data.totalMinutes)} listened`, pad, y);
-    y += 72;
-  }
-  if (bits.genre && data.topGenre) {
-    ctx.fillText(`Top genre: ${data.topGenre}`, pad, y);
-    y += 72;
-  }
-  if (bits.eras) {
-    ctx.fillText(`${data.eraCount} artist eras`, pad, y);
+  for (const line of lines) {
+    ctx.fillText(line, pad, ys, W - pad * 2);
+    ys += 72;
   }
 
   ctx.fillStyle = '#ffffff80';
