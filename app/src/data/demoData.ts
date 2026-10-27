@@ -184,6 +184,14 @@ export const DEMO_GENRES: Record<string, ArtistGenre> = Object.fromEntries(
   ]),
 );
 
+/** Fictional start reasons: mostly carried on, some chosen, some after a forward press. */
+function demoStart(r: number): string {
+  if (r < 0.55) return 'trackdone';
+  if (r < 0.8) return 'fwdbtn';
+  if (r < 0.95) return 'clickrow';
+  return 'playbtn';
+}
+
 const DEMO_PLATFORMS = ['android', 'android', 'ios', 'windows', 'mac'];
 
 /**
@@ -221,6 +229,8 @@ export function buildDemoEvents(): PlayEvent[] {
           ms,
           skipped,
           reasonEnd: skipped ? 'fwdbtn' : 'trackdone',
+          reasonStart: demoStart(rnd()),
+          album: null,
           shuffle: rnd() < 0.55,
           offline: rnd() < 0.06,
           platform: DEMO_PLATFORMS[Math.floor(rnd() * DEMO_PLATFORMS.length)],
