@@ -130,4 +130,35 @@ describe('App', () => {
     expect(useAppStore.getState().view).toBe('rediscover');
     expect(screen.getByRole('button', { name: 'Rediscover' })).toHaveAttribute('aria-pressed', 'true');
   });
+  it('shows full four-digit years on the rediscover cards', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getByRole('button', { name: 'Rediscover artists you left' }));
+    const years = document.querySelectorAll('.tj-year');
+    expect(years.length).toBeGreaterThan(0);
+    years.forEach((y) => expect(y.textContent).toMatch(/^\d{4}$/));
+  });
+
+  it('opens an artist panel from the library and jumps back into the story', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    await user.click(screen.getByRole('button', { name: 'Library' }));
+    await user.click(screen.getByRole('button', { name: 'Artists' }));
+    const tile = document.querySelector('.tj-tile-btn') as HTMLElement;
+    await user.click(tile);
+    expect(document.querySelector('.tj-artist-panel')).not.toBeNull();
+    expect(screen.getByText(/First heard/)).toBeInTheDocument();
+  });
+
+  it('adds habit chapters to the story when play events exist', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setView('flow');
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Demo data' }));
+    expect(screen.getByText('When you listen')).toBeInTheDocument();
+  });
 });
