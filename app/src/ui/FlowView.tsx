@@ -65,7 +65,7 @@ function fmtBig(n: number): string {
 function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number; total: number }) {
   const max = Math.max(1, ...beat.values);
   return (
-    <div className="tj-flow-stage">
+    <div className={beat.values.length > 0 ? 'tj-flow-stage' : 'tj-flow-stage hero'}>
       <p className="sr-only" role="status">
         {beat.title}. {beat.big} {beat.unit}.
       </p>
@@ -586,4 +586,4 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
       </div>
     </>
   );
-}
+              }
