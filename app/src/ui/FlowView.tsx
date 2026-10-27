@@ -274,6 +274,8 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
   const storyFocus = useAppStore((st) => st.storyFocus);
   const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
   const setStoryFocus = useAppStore((st) => st.setStoryFocus);
+  const hasOrigins = useAppStore((st) => Object.keys(st.genres).length > 0);
+  const originsAreDemo = useAppStore((st) => st.genresAreDemo);
   const setShareFocus = useAppStore((st) => st.setShareFocus);
   const setView = useAppStore((st) => st.setView);
   const [playing, setPlaying] = React.useState(false);
@@ -444,7 +446,7 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
                 className={i === active ? 'tj-flow-chapter on' : 'tj-flow-chapter'}
               >
                 <h3>{b.title}</h3>
-                {x?.kind === 'origins' && (
+                {x?.kind === 'origins' && !hasOrigins && (
                   <div
                     className="tj-flow-locked"
                     aria-label="World and Spectrum, locked until you add artist origins"
@@ -459,7 +461,34 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
                     </div>
                   </div>
                 )}
-                {x?.kind === 'origins' ? (
+                {x?.kind === 'origins' && hasOrigins && (
+                  <div className="tj-flow-locked" aria-label="World and Spectrum pages">
+                    <button type="button" onClick={() => setView('map')}>
+                      <strong>World</strong>
+                      <span>Open the page</span>
+                    </button>
+                    <button type="button" onClick={() => setView('genres')}>
+                      <strong>Spectrum</strong>
+                      <span>Open the page</span>
+                    </button>
+                  </div>
+                )}
+                {x?.kind === 'origins' && hasOrigins && (
+                  <div className="tj-flow-notice">
+                    <p>
+                      {originsAreDemo
+                        ? 'This demo already has sample origins loaded. Nothing is sent anywhere.'
+                        : 'Artist origins are already on this device from a lookup you ran. Nothing new is sent unless you start the lookup again on the World page.'}{' '}
+                      The results are on the World and Spectrum pages.
+                    </p>
+                    <div className="tj-flow-links">
+                      <Button variant="ghost" onClick={() => goTo(i + 1)}>
+                        Skip
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {x?.kind === 'origins' && !hasOrigins ? (
                   <div className="tj-flow-notice">
                     <p>
                       <strong>What it sends:</strong> artist names only, one request each to MusicBrainz, a
@@ -473,7 +502,7 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
                       </Button>
                     </div>
                   </div>
-                ) : (
+                ) : x?.kind === 'origins' ? null : (
                   <p>{b.caption}</p>
                 )}
                 {x?.kind === 'returned' && (
