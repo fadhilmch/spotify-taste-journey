@@ -1,4 +1,6 @@
 import { discoveries, hourHistogram, sessions, skipStats, weekdayHistogram } from './stats';
+import { artistFacts } from './artistFacts';
+import { rediscoveries } from './rediscovery';
 import type { PlayAggregate, PlayEvent } from './types';
 
 /**
@@ -18,6 +20,9 @@ export interface HabitBeat {
   values: number[];
   /** One label per bar. */
   labels: string[];
+  /** Special chapters that carry an action. */
+  kind?: 'returned' | 'artist' | 'origins' | 'share';
+  artist?: string;
   /** Index of the highlighted bar; -1 for none. */
   peak: number;
 }
@@ -134,3 +139,72 @@ export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = [])
   }
   return beats;
 }
+
+/** Chapter for names that were played a lot and then went quiet (counted from plays). */
+export function buildReturnedBeat(aggs: PlayAggregate[]): HabitBeat | null {
+  const list = rediscoveries(aggs);
+  if (list.length === 0) return null;
+  const top = list.slice(0, 3).map((r) => `${r.artist} (peak ${r.peakYear})`);
+  return {
+    id: 'habit-returned',
+    kind: 'returned',
+    label: 'Left behind',
+    title: 'Names you left behind',
+    big: String(list.length),
+    unit: 'artists gone quiet for a year or more',
+    caption: `Each had at least 120 minutes and no plays for 12 months or more. The biggest: ${top.join(', ')}. This is arithmetic on plays, not a statement about why.`,
+    values: [],
+    labels: [],
+    peak: -1,
+  };
+}
+
+/** Chapter for one artist, opened from the library. Minutes per year, from plays. */
+export function buildArtistBeat(aggs: PlayAggregate[], artist: string): HabitBeat | null {
+  const f = artistFacts(aggs, artist);
+  if (!f) return null;
+  const years = [...new Set(f.monthly.map((m) => m.month.slice(0, 4)))].sort();
+  const values = years.map((y) =>
+    f.monthly.filter((m) => m.month.startsWith(y)).reduce((a, m) => a + m.minutes, 0),
+  );
+  return {
+    id: `artist-${artist}`,
+    kind: 'artist',
+    artist,
+    label: artist,
+    title: artist,
+    big: String(Math.round(f.minutes / 60)),
+    unit: `h in total, ${f.firstMonth} to ${f.lastMonth}`,
+    caption: `Biggest year ${f.peakYear}, ${f.peakYearMinutes.toLocaleString('en-US')} minutes. Bars show minutes per year; the first and last years may be partly covered.`,
+    values,
+    labels: years.map((y) => y.slice(2)),
+    peak: argMax(values),
+  };
+}
+
+export const ORIGINS_BEAT: HabitBeat = {
+  id: 'step-origins',
+  kind: 'origins',
+  label: 'Origins',
+  title: 'Where your artists come from',
+  big: 'Optional',
+  unit: 'a lookup that you choose to start',
+  caption: '',
+  values: [],
+  labels: [],
+  peak: -1,
+};
+
+export const SHARE_BEAT: HabitBeat = {
+  id: 'step-share',
+  kind: 'share',
+  label: 'Your card',
+  title: 'Your card',
+  big: 'Share',
+  unit: 'you choose what goes on it',
+  caption:
+    'The card starts from the chapter you were on. You pick what is shown before anything leaves this device.',
+  values: [],
+  labels: [],
+  peak: -1,
+};
