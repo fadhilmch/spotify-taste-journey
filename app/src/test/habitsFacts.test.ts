@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { artistFacts } from '../data/artistFacts';
-import { buildHabitBeats } from '../data/habits';
+import { buildHabitBeats, buildReturnedBeat } from '../data/habits';
 import type { PlayAggregate, PlayEvent } from '../data/types';
 
 const ev = (ts: string, minutes: number): PlayEvent => ({
@@ -65,5 +65,24 @@ describe('artistFacts', () => {
   });
   it('returns null for an unknown artist', () => {
     expect(artistFacts(aggs, 'Nobody')).toBeNull();
+  });
+});
+
+describe('buildReturnedBeat', () => {
+  const mk = (month: string, artist: string, minutes: number): PlayAggregate => ({
+    month,
+    artist,
+    track: 't',
+    ms: minutes * 60_000,
+  });
+  it('is null when nobody has gone quiet', () => {
+    expect(buildReturnedBeat([mk('2025-01', 'A', 500), mk('2026-01', 'A', 500)])).toBeNull();
+  });
+  it('counts a heavily played artist that went quiet for a year or more', () => {
+    const aggs = [mk('2019-03', 'Old', 300), mk('2019-04', 'Old', 300), mk('2026-01', 'New', 600)];
+    const b = buildReturnedBeat(aggs)!;
+    expect(b.kind).toBe('returned');
+    expect(b.big).toBe('1');
+    expect(b.caption).toContain('Old (peak 2019)');
   });
 });
