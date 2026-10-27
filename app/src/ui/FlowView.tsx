@@ -586,4 +586,4 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
       </div>
     </>
   );
-              }
+}
