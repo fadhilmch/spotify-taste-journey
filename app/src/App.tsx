@@ -54,7 +54,14 @@ const SECTIONS: Array<{ id: SectionId; label: string; views: Array<[View, string
 const sectionOf = (v: View) => SECTIONS.find((s) => s.views.some(([id]) => id === v)) ?? SECTIONS[0];
 
 /** Only these views change with the time-range chips; hide the chips elsewhere. */
-const RANGE_VIEWS: ReadonlySet<View> = new Set<View>(['journey', 'map', 'genres', 'artists', 'tracks']);
+const RANGE_VIEWS: ReadonlySet<View> = new Set<View>([
+  'journey',
+  'map',
+  'genres',
+  'artists',
+  'tracks',
+  'share',
+]);
 
 /** One honest line per view - editorial headers instead of filler cards. */
 const VIEW_HEADS: Partial<Record<View, { title: string; blurb: string }>> = {
@@ -263,6 +270,13 @@ export default function App() {
                   <h2>{VIEW_HEADS[view]!.title}</h2>
                   <p>{VIEW_HEADS[view]!.blurb}</p>
                 </header>
+              )}
+              {view !== 'flow' && (
+                <p className="tj-scope">
+                  {RANGE_VIEWS.has(view)
+                    ? `Scope: follows the range above (${RANGES.find((r) => r.id === range)?.label ?? range})`
+                    : 'Scope: all time, whatever range is picked elsewhere'}
+                </p>
               )}
               {view === 'flow' && <FlowView aggs={aggregates} events={events} />}
               {view === 'rediscover' && <RediscoverView aggs={aggregates} />}
