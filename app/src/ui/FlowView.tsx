@@ -62,10 +62,20 @@ function fmtBig(n: number): string {
   return Math.round(n).toLocaleString('en-US');
 }
 
+function barStyle(v: number, max: number, i: number): React.CSSProperties {
+  return { height: `${Math.max(2, (v / max) * 100)}%`, ['--i' as string]: i };
+}
+
 function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number; total: number }) {
   const max = Math.max(1, ...beat.values);
+  const stageClass =
+    beat.values.length > 0
+      ? 'tj-flow-stage'
+      : String(beat.big).length > 6
+        ? 'tj-flow-stage hero hero-text'
+        : 'tj-flow-stage hero';
   return (
-    <div className="tj-flow-stage">
+    <div className={stageClass}>
       <p className="sr-only" role="status">
         {beat.title}. {beat.big} {beat.unit}.
       </p>
@@ -81,16 +91,23 @@ function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number
             <div key={i} className="tj-habit-col">
               <div
                 className={i === beat.peak ? 'tj-habit-bar peak' : 'tj-habit-bar'}
-                style={{ height: `${Math.max(2, (v / max) * 100)}%` }}
+                style={barStyle(v, max, i)}
               />
               <span className="tj-habit-lab">{beat.labels[i]}</span>
             </div>
           ))}
         </div>
       )}
-      <p className="tj-flow-legend">
-        <span>Counted from your play timestamps.</span>
-      </p>
+      {beat.kind === 'share' && (
+        <p className="tj-flow-legend">
+          <span>Top artist, top track and hours. Nothing leaves this device unless you save it.</span>
+        </p>
+      )}
+      {beat.kind !== 'origins' && beat.kind !== 'share' && (
+        <p className="tj-flow-legend">
+          <span>Counted from your play timestamps.</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -245,11 +262,11 @@ function MonthStrip({
       role="img"
       aria-label="Minutes played in every month. The months of the current chapter are highlighted."
     >
-      {bars.map((b) => (
+      {bars.map((b, i) => (
         <i
           key={b.k}
           className={any && b.k.slice(0, 4) >= lo && b.k.slice(0, 4) <= hi ? 'on' : undefined}
-          style={{ height: `${Math.max(4, b.h * 100)}%` }}
+          style={{ height: `${Math.max(4, b.h * 100)}%`, transitionDelay: `${Math.min(i, 40) * 8}ms` }}
         />
       ))}
     </div>
@@ -382,6 +399,20 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
     return () => clearTimeout(t);
   }, [story, artistChapter, extras, nStory, goTo]);
 
+  // Outgoing stage: when a habit chapter is involved, the previous stage fades out on top of the new one
+  // instead of vanishing. Derived during render (no effect) and cleared by a timer.
+  const [shown, setShown] = React.useState(active);
+  const [ghost, setGhost] = React.useState<number | null>(null);
+  if (shown !== active) {
+    setGhost(shown >= nStory || active >= nStory ? shown : null);
+    setShown(active);
+  }
+  React.useEffect(() => {
+    if (ghost === null) return;
+    const t = window.setTimeout(() => setGhost(null), 200);
+    return () => window.clearTimeout(t);
+  }, [ghost]);
+
   if (!story) return null;
   const chapters: Array<{ id: string; label: string }> = [...story.beats, ...extras];
   const cur = active < nStory ? story.beats[active] : null;
@@ -400,11 +431,27 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
         <div className="tj-flow-left">
           <MonthStrip aggs={aggs} years={story.years.map((y) => y.year)} from={strip.from} to={strip.to} />
           <p className="tj-strip-note">The story always uses all time.</p>
-          {active < nStory ? (
-            <Stage story={story} active={active} total={total} />
-          ) : (
-            <HabitStage beat={extras[active - nStory]} chapter={active + 1} total={total} />
-          )}
+          <div className="tj-flow-stagewrap">
+            {active < nStory ? (
+              <Stage story={story} active={active} total={total} />
+            ) : (
+              <HabitStage
+                key={extras[active - nStory].id}
+                beat={extras[active - nStory]}
+                chapter={active + 1}
+                total={total}
+              />
+            )}
+            {ghost !== null && ghost !== active && (
+              <div className="tj-flow-ghost" aria-hidden="true" key={`ghost-${ghost}`}>
+                {ghost < nStory ? (
+                  <Stage story={story} active={ghost} total={total} />
+                ) : extras[ghost - nStory] ? (
+                  <HabitStage beat={extras[ghost - nStory]} chapter={ghost + 1} total={total} />
+                ) : null}
+              </div>
+            )}
+          </div>
           <div className="tj-flow-rail" role="group" aria-label="Chapters">
             {chapters.map((b, i) => (
               <button

@@ -50,7 +50,7 @@ export function ShareView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
     const canvas = canvasRef.current;
     if (!canvas) return;
     try {
-      renderShareCard(canvas, data, cardBits);
+      renderShareCard(canvas, data, { ...cardBits, genre: false });
       setCanvasError(null);
     } catch (err) {
       setCanvasError(err instanceof Error ? err.message : String(err));
@@ -80,7 +80,6 @@ export function ShareView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
               ['artist', focusFacts ? 'Chapter artist' : 'Top artist'],
               ['track', 'Top track'],
               ['minutes', 'Minutes'],
-              ['genre', 'Top genre'],
               ['eras', 'Era count'],
             ] as Array<[keyof CardBits, string]>
           ).map(([k, label]) => (

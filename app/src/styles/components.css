@@ -285,7 +285,9 @@
     background: var(--txt-2);
     opacity: 0.3;
     border-radius: 1px;
-    transition: opacity 0.4s ease;
+    transition:
+      opacity 0.4s ease,
+      background-color 0.4s ease;
   }
   .tj-strip i.on {
     background: #1ed760;
@@ -363,6 +365,30 @@
     fill: none;
     stroke: #1ed760;
     stroke-width: 2;
+  }
+  .tj-tile:has(.tj-tile-spark) .tj-tile-btn {
+    display: flex;
+    flex-direction: column;
+  }
+  .tj-tile-note {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: var(--txt-2);
+  }
+  .tj-tile-spark {
+    display: block;
+    width: 100%;
+    height: 22px;
+    margin-top: auto;
+    padding-top: 8px;
+    box-sizing: content-box;
+  }
+  .tj-tile-spark path {
+    fill: none;
+    stroke: var(--green-soft, #1ed760);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+    opacity: 0.85;
   }
   .tj-tile-btn {
     all: unset;
@@ -462,6 +488,7 @@
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 13px;
     padding: 12px;
+    display: flex;
   }
   .tj-tile:hover {
     background: #26262b;
@@ -520,6 +547,17 @@
     position: sticky;
     bottom: 0;
     z-index: 30;
+  }
+  /* Soft edge so the next chapter fades out above the bar instead of being cut by it. */
+  .tj-player::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 28px;
+    background: linear-gradient(to top, rgba(10, 10, 12, 0.85), transparent);
+    pointer-events: none;
   }
   .tj-player .tj-thumb {
     width: 46px;
@@ -1287,11 +1325,40 @@
     top: 16px;
     /* Leave room for the fixed player bar so the stage is never covered. */
     max-height: calc(100vh - 110px);
+    /* One height for every chapter, so the stage does not jump as the content changes. */
+    min-height: min(600px, calc(100vh - 110px));
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 16px;
     padding: 18px 18px 12px;
+  }
+  .tj-flow-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  /* A chapter with no chart: let the number be the picture instead of leaving an empty card. */
+  .tj-flow-stage.hero {
+    justify-content: center;
+  }
+  .tj-flow-stage.hero .tj-flow-big {
+    font-size: clamp(52px, 9vw, 92px);
+    margin: 6px 0 10px;
+  }
+  .tj-scope {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: var(--txt-2);
+  }
+  .tj-flow-stage.hero-text .tj-flow-big {
+    font-size: clamp(34px, 5vw, 54px);
+  }
+  .tj-flow-stage.hero-text .tj-flow-big small {
+    display: block;
+    margin-top: 6px;
   }
   .tj-flow-kicker {
     margin: 0;
@@ -1365,7 +1432,7 @@
     flex-wrap: wrap;
     gap: 2px;
     align-items: center;
-    margin-top: 10px;
+    margin-top: auto;
     padding-top: 8px;
     border-top: 1px solid var(--line);
   }
@@ -1428,6 +1495,82 @@
     opacity: 1;
     transform: none;
   }
+  /* Hand-over: when a chapter becomes the active one its title, text and links settle in one after another. */
+  .tj-flow-chapter.on > * {
+    animation: tj-flow-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .tj-flow-chapter.on > *:nth-child(2) {
+    animation-delay: 0.08s;
+  }
+  .tj-flow-chapter.on > *:nth-child(n + 3) {
+    animation-delay: 0.16s;
+  }
+  /* A new habit stage builds itself: kicker and number first, then bars grow up from the baseline. */
+  .tj-flow-stage > .tj-flow-kicker,
+  .tj-flow-stage > .tj-flow-big {
+    animation: tj-flow-rise 0.45s ease-out both;
+  }
+  .tj-habit-bar {
+    transform-origin: bottom;
+    animation: tj-bar-grow 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 14ms + 0.03s);
+  }
+  @keyframes tj-flow-rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes tj-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  /* When the year chart comes back after the habit chapters, it fades in instead of popping. */
+  .tj-flow-stage > .tj-flow-chart,
+  .tj-flow-stage > .tj-flow-legend {
+    animation: tj-fade-in 0.5s ease-out both;
+  }
+  .tj-flow-stagewrap {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .tj-flow-ghost {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+    background: var(--panel);
+    animation: tj-stage-out 0.15s ease-in forwards;
+  }
+  .tj-flow-ghost .tj-flow-kicker,
+  .tj-flow-ghost .tj-flow-big {
+    visibility: hidden;
+  }
+  .tj-flow-ghost * {
+    animation: none !important;
+  }
+  @keyframes tj-stage-out {
+    to {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+  @keyframes tj-bar-grow {
+    from {
+      transform: scaleY(0.08);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
   .tj-flow-chapter h3 {
     margin: 0 0 8px;
     font-size: 22px;
@@ -1469,19 +1612,27 @@
       grid-template-columns: minmax(0, 1fr);
       gap: 8px;
     }
+    .tj-flow-stage.hero .tj-flow-big {
+      font-size: 28px;
+      margin: 2px 0;
+    }
     .tj-flow-left {
       top: 0;
       z-index: 2;
       padding: 10px 12px 6px;
+      min-height: min(360px, 42vh);
       border-radius: 0 0 16px 16px;
     }
     .tj-flow-big {
       font-size: 28px;
       margin: 2px 0;
     }
+    .tj-flow-stage .tj-habit-bars {
+      height: min(159px, 19vh);
+    }
     .tj-flow-chart {
-      max-height: 26vh;
-      min-height: 110px;
+      max-height: 21vh;
+      min-height: 100px;
     }
     .tj-flow-pip {
       display: none;
@@ -1497,11 +1648,39 @@
       font-size: 17px;
     }
     .tj-flow-chapter {
-      min-height: 40vh;
+      min-height: 36vh;
       justify-content: flex-start;
+    }
+    /* Headings slide out under a soft edge instead of touching the stage. */
+    .tj-flow-left::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      height: 22px;
+      background: linear-gradient(to bottom, var(--bg), transparent);
+      pointer-events: none;
     }
     .tj-flow-end {
       padding-bottom: 0;
+    }
+  }
+  /* Short phones: give the chapter text more of the screen. */
+  @media (max-width: 860px) and (max-height: 720px) {
+    .tj-flow-left {
+      min-height: min(300px, 40vh);
+      padding-top: 6px;
+    }
+    .tj-flow-stage .tj-habit-bars {
+      height: min(120px, 17vh);
+    }
+    .tj-flow-chart {
+      max-height: 17vh;
+      min-height: 84px;
+    }
+    .tj-flow-left .tj-strip-note {
+      display: none;
     }
   }
 }

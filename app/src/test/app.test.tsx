@@ -48,7 +48,9 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Explore' }));
     await user.click(screen.getByRole('button', { name: 'Habits' }));
     expect(screen.getByText('Your habits and discoveries')).toBeInTheDocument();
-    expect(screen.getAllByText(/First obsession/i).length).toBeGreaterThan(0);
+    // Artist chapters live in the Story, not here.
+    expect(screen.queryByText(/First obsession/i)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open the story' })).toBeInTheDocument();
     expect(screen.getByText(/Listening clock/i)).toBeInTheDocument();
     // Listening clock: a 24-hour dial; selecting an hour shows its share.
     expect(
@@ -117,8 +119,17 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: '6 months' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Library' }));
     expect(screen.getByRole('button', { name: '6 months' })).toBeInTheDocument();
+    expect(screen.getByText(/Scope: follows the range above/)).toBeInTheDocument();
+    // Share draws its card from the range, so the chips are shown there too.
     await user.click(screen.getByRole('button', { name: 'Share' }));
-    expect(screen.queryByRole('button', { name: '6 months' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '6 months' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '6 months' }));
+    expect(screen.getByText(/Scope: follows the range above \(6 months\)/)).toBeInTheDocument();
+    // The Top genre toggle is not offered.
+    expect(screen.queryByRole('checkbox', { name: /Top genre/i })).not.toBeInTheDocument();
+    // Pages without chips say they cover all time.
+    await user.click(screen.getByRole('button', { name: 'Explore' }));
+    expect(screen.getByText(/Scope: all time/)).toBeInTheDocument();
   });
 
   it('ends the story with links into the rest of the app', async () => {

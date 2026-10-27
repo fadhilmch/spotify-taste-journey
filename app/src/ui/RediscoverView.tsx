@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { exploration, rediscoveries, yearEras } from '../data/rediscovery';
 import { fmtMinutes } from '../data/stats';
 import type { PlayAggregate } from '../data/types';
+import { useAppStore } from '../state/store';
 import { Card, CardAside } from './primitives';
 import { artistBackground } from './theme';
 
@@ -17,6 +18,12 @@ function sinceLabel(months: number): string {
  * says what changed in your listening, never why.
  */
 export function RediscoverView({ aggs }: { aggs: PlayAggregate[] }) {
+  const setView = useAppStore((st) => st.setView);
+  const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
+  const openArtist = (name: string) => {
+    setLibraryArtist(name);
+    setView('artists');
+  };
   const back = useMemo(() => rediscoveries(aggs).slice(0, 10), [aggs]);
   const eras = useMemo(() => yearEras(aggs, 3), [aggs]);
   const explore = useMemo(() => exploration(aggs), [aggs]);
@@ -39,7 +46,9 @@ export function RediscoverView({ aggs }: { aggs: PlayAggregate[] }) {
                 <span className="tj-rank">{i + 1}</span>
                 <span className="tj-thumb" style={{ background: artistBackground(r.artist) }} />
                 <span className="tj-mini-name tj-mini-wrap">
-                  {r.artist}
+                  <button type="button" className="tj-linkbtn" onClick={() => openArtist(r.artist)}>
+                    {r.artist}
+                  </button>
                   <em>
                     peaked {r.peakYear}, quiet {sinceLabel(r.monthsSince)}
                   </em>
@@ -57,7 +66,14 @@ export function RediscoverView({ aggs }: { aggs: PlayAggregate[] }) {
             <li key={e.year}>
               <span className="tj-year">{e.year}</span>
               <span className="tj-mini-name tj-mini-wrap">
-                {e.top.join(', ')}
+                {e.top.map((name, k) => (
+                  <React.Fragment key={name}>
+                    {k > 0 && ', '}
+                    <button type="button" className="tj-linkbtn" onClick={() => openArtist(name)}>
+                      {name}
+                    </button>
+                  </React.Fragment>
+                ))}
                 <em>
                   {e.year === eras[0].year
                     ? 'first year on record'

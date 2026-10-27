@@ -85,6 +85,66 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
   const source = useAppStore((s) => s.source);
   const ranged = filterToMonths(aggs, rangeMonthKeys(months, range));
   const artists = topArtists(ranged, 12);
+  // Years each artist was heard, over all history (not just the range), counted from plays.
+  const span = React.useMemo(() => {
+    const m = new Map<string, [string, string]>();
+    for (const a of aggs) {
+      const cur = m.get(a.artist);
+      if (!cur) m.set(a.artist, [a.month, a.month]);
+      else {
+        if (a.month < cur[0]) cur[0] = a.month;
+        if (a.month > cur[1]) cur[1] = a.month;
+      }
+    }
+    return m;
+  }, [aggs]);
+  const years = (name: string) => {
+    const r = span.get(name);
+    if (!r) return '';
+    const a = r[0].slice(0, 4);
+    const b = r[1].slice(0, 4);
+    return a === b ? ` · heard in ${a}` : ` · heard ${a} to ${b}`;
+  };
+  // Minutes per month for each artist across the selected range, so every tile's line shares one time axis.
+  const series = React.useMemo(() => {
+    const inRange = rangeMonthKeys(months, range);
+    const keys = months.map((m) => m.key).filter((k) => inRange.has(k));
+    const pos = new Map(keys.map((k, i) => [k, i]));
+    const out = new Map<string, number[]>();
+    for (const a of aggs) {
+      const i = pos.get(a.month);
+      if (i === undefined) continue;
+      let row = out.get(a.artist);
+      if (!row) {
+        row = new Array<number>(keys.length).fill(0);
+        out.set(a.artist, row);
+      }
+      row[i] += a.ms / 60000;
+    }
+    return out;
+  }, [aggs, months, range]);
+  const spark = (name: string) => {
+    const row = series.get(name);
+    if (!row || row.length < 2) return null;
+    const max = Math.max(1, ...row);
+    const d = row
+      .map(
+        (v, k) =>
+          `${k ? 'L' : 'M'}${((k * 100) / (row.length - 1)).toFixed(1)} ${(15 - (v / max) * 14).toFixed(1)}`,
+      )
+      .join(' ');
+    return (
+      <svg
+        className="tj-tile-spark"
+        viewBox="0 0 100 16"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={`Minutes per month for ${name}, ${rangeLabel.toLowerCase()}`}
+      >
+        <path d={d} vectorEffect="non-scaling-stroke" />
+      </svg>
+    );
+  };
   const libraryArtist = useAppStore((st) => st.libraryArtist);
   const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
   const [picked, setPicked] = React.useState<string | null>(libraryArtist);
@@ -117,11 +177,18 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
               <p className="tj-tile-name">
                 {i + 1}. {t.name}
               </p>
-              <p className="tj-tile-sub">{fmtMinutes(t.minutes)}</p>
+              <p className="tj-tile-sub">
+                {fmtMinutes(t.minutes)}
+                {years(t.name)}
+              </p>
+              {spark(t.name)}
             </button>
           </div>
         ))}
       </div>
+      <p className="tj-tile-note">
+        Lines show minutes per month in the selected range ({rangeLabel.toLowerCase()}).
+      </p>
       {picked && <ArtistPanel aggs={aggs} artist={picked} />}
     </Card>
   );
@@ -132,6 +199,12 @@ export function TracksView({ months, aggs }: { months: MonthBucket[]; aggs: Play
   const source = useAppStore((s) => s.source);
   const ranged = filterToMonths(aggs, rangeMonthKeys(months, range));
   const tracks = topTracks(ranged, 10);
+  const setView = useAppStore((st) => st.setView);
+  const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
+  const openArtist = (name: string) => {
+    setLibraryArtist(name);
+    setView('artists');
+  };
   const rangeLabel = { '4w': '4 weeks', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
 
   return (
@@ -152,7 +225,11 @@ export function TracksView({ months, aggs }: { months: MonthBucket[]; aggs: Play
             <span className="tj-thumb" style={{ background: artistBackground(t.artist) }} />
             <span className="tj-mini-name">
               {t.name}
-              <em>{t.artist}</em>
+              <em>
+                <button type="button" className="tj-linkbtn" onClick={() => openArtist(t.artist)}>
+                  {t.artist}
+                </button>
+              </em>
             </span>
             <span className="tj-mini-val">{fmtMinutes(t.minutes)}</span>
           </li>
