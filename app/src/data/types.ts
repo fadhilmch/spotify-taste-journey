@@ -18,6 +18,10 @@ export interface PlayEvent {
   /** Spotify's own skipped flag; null when the file does not carry it. */
   skipped: boolean | null;
   reasonEnd: string | null;
+  /** How the play began (clickrow, playbtn, backbtn, trackdone, fwdbtn ...); null when not recorded. */
+  reasonStart: string | null;
+  /** Album name; null when not recorded. */
+  album: string | null;
   shuffle: boolean | null;
   offline: boolean | null;
   platform: string | null;

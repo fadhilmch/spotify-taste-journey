@@ -10,6 +10,8 @@ const ev = (ts: string, minutes: number): PlayEvent => ({
   ms: minutes * 60_000,
   skipped: null,
   reasonEnd: null,
+  reasonStart: null,
+  album: null,
   shuffle: null,
   offline: null,
   platform: null,
@@ -118,5 +120,42 @@ describe('forward-button story arc', () => {
       (x) => x.id === 'habit-skips',
     )!;
     expect(b.caption).toContain('It was 10% in 2018, highest in 2022 at 60%, and 20% in 2025.');
+  });
+});
+
+describe('loop, album and start chapters', () => {
+  it('add chapters only when the data carries what they need', () => {
+    const plain = buildHabitBeats([ev('2024-01-01T10:00:00Z', 3)]).map((b) => b.id);
+    expect(plain).not.toContain('habit-picks');
+    expect(plain).not.toContain('habit-loops');
+    expect(plain).not.toContain('habit-albums');
+  });
+  it('tell the three stories from plays', () => {
+    const rows: PlayEvent[] = [];
+    for (let i = 0; i < 9; i += 1) {
+      rows.push({
+        ...ev(`2023-05-02T10:${String(i * 2).padStart(2, '0')}:00Z`, 3),
+        track: 'Same',
+        album: `Alb`,
+        reasonStart: i === 0 ? 'clickrow' : 'trackdone',
+      });
+    }
+    for (let i = 0; i < 9; i += 1) {
+      rows.push({
+        ...ev(`2024-06-0${i + 1}T12:00:00Z`, 3),
+        track: `T${i}`,
+        album: 'Alb',
+        reasonStart: 'fwdbtn',
+      });
+    }
+    const beats = buildHabitBeats(rows);
+    const loops = beats.find((b) => b.id === 'habit-loops')!;
+    expect(loops.big).toBe('1');
+    expect(loops.caption).toContain('9 plays of "Same" by A, ending in May 2023');
+    const albums = beats.find((b) => b.id === 'habit-albums')!;
+    expect(albums.big).toBe('1');
+    expect(albums.caption).toContain('different tracks played, not whether you heard an album in order');
+    const picks = beats.find((b) => b.id === 'habit-picks')!;
+    expect(picks.big).toBe('6%');
   });
 });

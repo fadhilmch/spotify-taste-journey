@@ -2,10 +2,13 @@ import {
   discoveries,
   endedOnForward,
   forwardByYear,
+  albumStats,
   hourHistogram,
+  loopStats,
   sessions,
   skipFlagGapYears,
   skipStats,
+  startStats,
   weekdayHistogram,
 } from './stats';
 import { artistFacts } from './artistFacts';
@@ -47,6 +50,17 @@ function argMin(v: number[]): number {
   let best = 0;
   for (let i = 1; i < v.length; i += 1) if (v[i] < v[best]) best = i;
   return best;
+}
+/** "It was 10% in 2018, highest in 2022 at 60%, and 20% in 2025." Plain arithmetic on the bars. */
+function arcSentence(years: Array<{ year: string; rate: number }>): string {
+  const first = years[0];
+  const last = years[years.length - 1];
+  const rates = years.map((y) => Math.round(y.rate * 100));
+  const top = years[argMax(rates)];
+  const p = (r: number) => Math.round(r * 100);
+  return top === first || top === last
+    ? `It went from ${p(first.rate)}% in ${first.year} to ${p(last.rate)}% in ${last.year}.`
+    : `It was ${p(first.rate)}% in ${first.year}, highest in ${top.year} at ${p(top.rate)}%, and ${p(last.rate)}% in ${last.year}.`;
 }
 const pct = (part: number, whole: number) => Math.round((part / whole) * 100);
 const hh = (h: number) => `${String(h).padStart(2, '0')}:00`;
@@ -142,6 +156,24 @@ export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = [])
       });
     }
   }
+  const st = startStats(events);
+  if (st.hasStarts) {
+    const p = (r: number) => Math.round(r * 100);
+    const barYears = st.byYear.length >= 2;
+    const rates = st.byYear.map((y) => p(y.rate));
+    beats.push({
+      id: 'habit-picks',
+      label: 'Starts',
+      title: 'How a track starts',
+      big: `${p(st.chosen)}%`,
+      unit: 'of plays began with you choosing, pressing play or going back',
+      caption:
+        `${p(st.carried)}% carried on by themselves from the previous track and ${p(st.forward)}% began after you pressed forward. ${barYears ? `${arcSentence(st.byYear)} Bars show the chosen share for each year, from 100 plays up.` : ''}`.trim(),
+      values: barYears ? rates : [],
+      labels: barYears ? st.byYear.map((y) => y.year.slice(2)) : [],
+      peak: barYears ? argMax(rates) : -1,
+    });
+  }
   if (aggs.length > 0) {
     const dis = discoveries(aggs);
     const years = [...new Set(dis.byMonth.map((m) => m.month.slice(0, 4)))].sort();
@@ -172,6 +204,39 @@ export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = [])
       values: [],
       labels: [],
       peak: -1,
+    });
+  }
+  const lp = loopStats(events);
+  if (lp.runs > 0 && lp.longest) {
+    const barYears = lp.byYear.length >= 2;
+    const vals = lp.byYear.map((y) => y.runs);
+    beats.push({
+      id: 'habit-loops',
+      label: 'On loop',
+      title: 'Songs on loop',
+      big: lp.runs.toLocaleString('en-US'),
+      unit: 'times one track played 5 or more times in a row',
+      caption: `Plays count as a run when each starts within 30 minutes of the last. The longest was ${lp.longest.count} plays of "${lp.longest.track}" by ${lp.longest.artist}, ending in ${lp.longest.endMonth}.${barYears ? ' Bars show runs by the year they began.' : ''}`,
+      values: barYears ? vals : [],
+      labels: barYears ? lp.byYear.map((y) => y.year.slice(2)) : [],
+      peak: barYears ? argMax(vals) : -1,
+    });
+  }
+  const al = albumStats(events);
+  if (al.wide > 0) {
+    const barYears = al.byYear.length >= 2;
+    const vals = al.byYear.map((y) => y.wide);
+    const topNames = al.top.map((t) => `"${t.album}" by ${t.artist}`).join(', ');
+    beats.push({
+      id: 'habit-albums',
+      label: 'Albums',
+      title: 'Albums you went into',
+      big: al.wide.toLocaleString('en-US'),
+      unit: 'albums where you played 8 or more different tracks',
+      caption: `Of ${al.albums.toLocaleString('en-US')} albums in total. Most played of these: ${topNames}. This counts different tracks played, not whether you heard an album in order.${barYears ? ' Bars show, for each year, albums with 8+ different tracks played that year.' : ''}`,
+      values: barYears ? vals : [],
+      labels: barYears ? al.byYear.map((y) => y.year.slice(2)) : [],
+      peak: barYears ? argMax(vals) : -1,
     });
   }
   return beats;

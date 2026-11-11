@@ -22,6 +22,8 @@ interface ExtendedRow {
   master_metadata_album_artist_name?: unknown;
   skipped?: unknown;
   reason_end?: unknown;
+  reason_start?: unknown;
+  master_metadata_album_album_name?: unknown;
   shuffle?: unknown;
   offline?: unknown;
   platform?: unknown;
@@ -209,6 +211,11 @@ function parseRows(json: unknown[]): ParseSummary {
         ms,
         skipped: typeof r.skipped === 'boolean' ? r.skipped : null,
         reasonEnd: typeof r.reason_end === 'string' ? r.reason_end : null,
+        reasonStart: typeof r.reason_start === 'string' ? r.reason_start : null,
+        album:
+          typeof r.master_metadata_album_album_name === 'string' && r.master_metadata_album_album_name !== ''
+            ? r.master_metadata_album_album_name
+            : null,
         shuffle: typeof r.shuffle === 'boolean' ? r.shuffle : null,
         offline: typeof r.offline === 'boolean' ? r.offline : null,
         platform: typeof r.platform === 'string' ? r.platform : null,
@@ -244,6 +251,8 @@ function parseRows(json: unknown[]): ParseSummary {
         ms,
         skipped: null,
         reasonEnd: null,
+        reasonStart: null,
+        album: null,
         shuffle: null,
         offline: null,
         platform: null,
