@@ -4,7 +4,6 @@ import { FileInput } from './primitives';
 
 export function SourceBar() {
   const source = useAppStore((s) => s.source);
-  const fileName = useAppStore((s) => s.fileName);
   const loadDemo = useAppStore((s) => s.loadDemo);
   const loadFiles = useAppStore((s) => s.loadFiles);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -33,13 +32,6 @@ export function SourceBar() {
         <p className="tj-srcnote">
           Everything below runs on invented demo data - same shape as a real Spotify export, so the screens
           stay identical when yours lands.
-        </p>
-      )}
-      {source === 'export' && (
-        <p className="tj-srcnote">
-          {fileName ? `Loaded ${fileName}. ` : ''}
-          Parsed in this browser tab and never uploaded. Only listening fields (time, track, artist,
-          milliseconds played) are read; anything else in the export is ignored.
         </p>
       )}
     </div>
