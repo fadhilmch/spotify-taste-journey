@@ -1,4 +1,5 @@
 import React from 'react';
+import { normalizeArtistName } from '../data/genreService';
 import { useAppStore } from '../state/store';
 import { Button, Card, FileInput } from './primitives';
 
@@ -13,9 +14,13 @@ export function CollectionImport() {
   const error = useAppStore((s) => s.collectionError);
   const loadCollection = useAppStore((s) => s.loadCollection);
   const ref = React.useRef<HTMLInputElement>(null);
-  const mapped = Object.keys(origins).length;
   const aggregates = useAppStore((s) => s.aggregates);
-  const inHistory = React.useMemo(() => new Set(aggregates.map((a) => a.artist)).size, [aggregates]);
+  const { inHistory, mapped } = React.useMemo(() => {
+    const names = new Set(aggregates.map((a) => a.artist));
+    let m = 0;
+    for (const n of names) if (origins[normalizeArtistName(n)]) m += 1;
+    return { inHistory: names.size, mapped: m };
+  }, [aggregates, origins]);
 
   return (
     <Card id="tj-collection-h" title="Already collected your artists from MusicBrainz?">
@@ -35,9 +40,10 @@ export function CollectionImport() {
       </Button>
       {stats && !error && (
         <p className="tj-note" role="status">
-          {mapped} of your {inHistory} artists placed on the map. Left off rather than guessed (file totals):{' '}
-          {stats.noCandidates} not found, {stats.noExactMatch + stats.ambiguous} without one clear match,{' '}
-          {stats.noCountry} with no country on record.
+          {mapped} of your {inHistory} artists placed on the map. The file has {stats.total} artist lines:{' '}
+          {stats.accepted} placed, {stats.noCandidates} not found, {stats.noExactMatch} with no exact name or
+          alias match, {stats.ambiguous} tied for the top score, {stats.noCountry} with no country on record
+          {stats.invalid > 0 ? `, ${stats.invalid} unreadable` : ''}. Left off rather than guessed.
         </p>
       )}
       {error && (

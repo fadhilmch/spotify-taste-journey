@@ -59,7 +59,23 @@ describe('resolveCollection', () => {
     expect(JSON.stringify(r)).not.toContain('rock');
   });
 
-  it('counts invalid lines, bad country codes and repeated names once', () => {
+  it('every line lands in exactly one count, so the counts add up to the total', () => {
+    const text = [
+      row('A', [c('A', 100, { country: 'FR' })]),
+      row('a', [c('a', 100, { country: 'FR' })]),
+      row('B', []),
+      row('C', [c('Other', 100)]),
+      row('D', [c('D', 100), c('D', 100)]),
+      row('E', [c('E', 100)]),
+    ].join('\n');
+    const { stats: s } = resolveCollection(text);
+    expect(s.total).toBe(6);
+    expect(s.accepted + s.noCandidates + s.noExactMatch + s.ambiguous + s.noCountry + s.invalid).toBe(
+      s.total,
+    );
+  });
+
+  it('counts invalid lines and bad country codes', () => {
     const text = [
       'not json',
       '{"q":1}',
@@ -68,7 +84,7 @@ describe('resolveCollection', () => {
       row('Bad', [c('Bad', 100, { country: 'Sweden' })]),
     ].join('\n');
     const r = resolveCollection(text);
-    expect(r.stats).toMatchObject({ invalid: 2, total: 2, accepted: 1, noCountry: 1 });
+    expect(r.stats).toMatchObject({ invalid: 2, total: 3, accepted: 2, noCountry: 1 });
   });
 });
 

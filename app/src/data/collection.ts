@@ -19,7 +19,7 @@ import type { ArtistOrigin } from './types';
  */
 
 export interface CollectionStats {
-  /** Distinct artist lines read. */
+  /** Artist lines read. Every line lands in exactly one of the counts below, so they add up to this. */
   total: number;
   /** Accepted with a country: these can be pinned. */
   accepted: number;
@@ -69,7 +69,6 @@ const isStr = (v: unknown): v is string => typeof v === 'string' && v.trim() !==
 export function resolveCollection(text: string): ResolvedCollection {
   const origins: Record<string, ArtistOrigin> = {};
   const stats = emptyStats();
-  const seen = new Set<string>();
 
   for (const line of text.split('\n')) {
     if (!line.trim()) continue;
@@ -85,8 +84,6 @@ export function resolveCollection(text: string): ResolvedCollection {
       continue;
     }
     const key = normalizeArtistName(row.q);
-    if (seen.has(key)) continue; // a resumed run can repeat a name; count it once
-    seen.add(key);
     stats.total += 1;
 
     const cands = row.cands as RawCandidate[];
@@ -113,7 +110,8 @@ export function resolveCollection(text: string): ResolvedCollection {
       stats.noCountry += 1;
       continue;
     }
-    origins[key] = { country: hit.country.toUpperCase(), area: isStr(hit.area) ? hit.area : null };
+    // Names that differ only by case/spacing share one key; the first accepted one wins.
+    origins[key] ??= { country: hit.country.toUpperCase(), area: isStr(hit.area) ? hit.area : null };
     stats.accepted += 1;
     if (!(isStr(hit.name) && normalizeArtistName(hit.name) === key)) stats.viaAlias += 1;
   }
