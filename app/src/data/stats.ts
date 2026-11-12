@@ -161,7 +161,7 @@ export function fmtMinutes(min: number): string {
   if (min >= 60000) return `${(min / 60000).toFixed(1)}k hr`;
   if (min >= 10000) return `${(min / 1000).toFixed(1)}k min`;
   if (min >= 1000) return `${(min / 1000).toFixed(1)}k min`;
-  return `${min} min`;
+  return `${Math.round(min)} min`;
 }
 
 /* ---- Deeper stats over per-play events (extended exports) ---- */

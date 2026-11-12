@@ -38,7 +38,10 @@ Two data sources, always clearly labeled:
   service). One pin per origin COUNTRY, placed at the country's center: it marks where
   artists are from, never where you listened. Pin size is your minutes in the current
   range; the dashed route links your chapters in time order. Origins (ISO country from
-  MusicBrainz) use the same one-time opt-in as genre tags; artists with no origin on
+  MusicBrainz) come either from the same one-time opt-in as genre tags, or from a collection
+  file you made yourself with the collection script and load on the page (read on this
+  device only, country only, strict name match; see `docs/musicbrainz-collection.md`);
+  artists with no origin on
   record are listed explicitly instead of being guessed. Demo mode uses built-in demo
   tags and stays offline.
 - **Artists / Tracks** - ranked lists with first-appearance dates from your own history.
