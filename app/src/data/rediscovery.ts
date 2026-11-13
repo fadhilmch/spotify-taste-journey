@@ -121,3 +121,56 @@ export function exploration(aggs: PlayAggregate[]): ExplorationYear[] {
   });
   return out;
 }
+
+export interface ConcentrationYear {
+  year: string;
+  /** Distinct artists played that year. */
+  artists: number;
+  /** Fewest top artists whose minutes add up to at least half of the year. */
+  half: number;
+  /** Shares (0..1) of the year's minutes for the most-played artists, largest first. Capped at `maxDots`. */
+  shares: number[];
+  /** True when the data covers fewer than 12 months of that year. */
+  partial: boolean;
+}
+
+/**
+ * Narrow or wide: how many artists it takes to make up half of each year's minutes.
+ * `half` and `artists` are counted over every artist; `shares` is only the largest
+ * `maxDots` of them, for drawing. Plain arithmetic on the plays.
+ */
+export function concentration(aggs: PlayAggregate[], maxDots = 110): ConcentrationYear[] {
+  const byYear = new Map<string, { minutes: Map<string, number>; months: Set<string> }>();
+  for (const a of aggs) {
+    const y = a.month.slice(0, 4);
+    let e = byYear.get(y);
+    if (!e) {
+      e = { minutes: new Map(), months: new Set() };
+      byYear.set(y, e);
+    }
+    e.minutes.set(a.artist, (e.minutes.get(a.artist) ?? 0) + a.ms);
+    e.months.add(a.month);
+  }
+  const out: ConcentrationYear[] = [];
+  for (const year of [...byYear.keys()].sort()) {
+    const e = byYear.get(year)!;
+    const sorted = [...e.minutes.values()].sort((a, b) => b - a);
+    const total = sorted.reduce((s, v) => s + v, 0);
+    if (total <= 0) continue;
+    let run = 0;
+    let half = 0;
+    for (const v of sorted) {
+      run += v;
+      half += 1;
+      if (run * 2 >= total) break;
+    }
+    out.push({
+      year,
+      artists: sorted.length,
+      half,
+      shares: sorted.slice(0, maxDots).map((v) => v / total),
+      partial: e.months.size < 12,
+    });
+  }
+  return out;
+}

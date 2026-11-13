@@ -290,6 +290,47 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
+  .tj-nw-stage {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .tj-nw-svg {
+    flex: 0 1 260px;
+    width: 260px;
+    max-width: 100%;
+    aspect-ratio: 1;
+    border-radius: 14px;
+    background: var(--panel-2);
+  }
+  .tj-nw-dot {
+    transition:
+      r 0.6s ease,
+      fill 0.4s ease,
+      opacity 0.4s ease;
+  }
+  .tj-nw-read {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
+  .tj-nw-big {
+    font-size: 52px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tj-nw-years {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tj-nw-dot {
+      transition: none;
+    }
+  }
   .tj-habit-bars {
     display: flex;
     align-items: flex-end;
