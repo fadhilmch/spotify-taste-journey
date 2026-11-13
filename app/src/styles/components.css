@@ -1870,3 +1870,66 @@
     }
   }
 }
+@layer components {
+  .tj-cmap {
+    margin-top: 6px;
+  }
+  .tj-cmap-top {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 6px 20px;
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    font-size: 12px;
+    color: #b3b3b8;
+  }
+  .tj-cmap-top li {
+    display: grid;
+    grid-template-columns: 50px 1fr;
+    align-items: baseline;
+    min-width: 0;
+  }
+  .tj-cmap-top li span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tj-cmap-top b {
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .tj-cmap-key {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 6px 16px;
+    margin: 12px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid #2a2a30;
+    font-size: 11px;
+    color: #b3b3b8;
+  }
+  .tj-cmap-key b {
+    color: #fff;
+  }
+  .tj-cmap-scale,
+  .tj-cmap-np {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tj-cmap-ramp {
+    display: inline-block;
+    width: 56px;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, rgba(30, 215, 96, 0.18), rgba(30, 215, 96, 1));
+  }
+  .tj-cmap-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    border: 1px dashed #7a7a82;
+  }
+}
