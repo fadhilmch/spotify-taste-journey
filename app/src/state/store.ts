@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { buildDemoAggregates, buildDemoEvents, DEMO_GENRES } from '../data/demoData';
-import { matchArtists } from '../data/genreService';
+import { matchArtists, normalizeArtistName } from '../data/genreService';
+import { readCollectionFile, type CollectionStats } from '../data/collection';
 import type { ParseSummary } from '../data/types';
 import { extractZipJson, isZipName, type FileReport, type PickedFile } from '../data/importFiles';
 import { uniqueArtists } from '../data/stats';
-import type { ArtistGenre, PlayAggregate, PlayEvent, View } from '../data/types';
+import type { ArtistGenre, ArtistOrigin, PlayAggregate, PlayEvent, View } from '../data/types';
 
 export type Source = 'demo' | 'export' | null;
 export type MatchState = 'idle' | 'matching' | 'done' | 'error';
@@ -27,6 +28,10 @@ interface AppState {
   events: PlayEvent[];
   genres: Record<string, ArtistGenre>;
   genresAreDemo: boolean;
+  /** Origins from an imported collection file, keyed by normalized artist name. Country only (CC0). */
+  origins: Record<string, ArtistOrigin>;
+  collectionStats: CollectionStats | null;
+  collectionError: string | null;
   matchState: MatchState;
   matchProgress: { done: number; total: number };
   matchError: string | null;
@@ -43,6 +48,7 @@ interface AppState {
   loadFiles: (files: File[]) => Promise<void>;
   loadProgress: { done: number; total: number } | null;
   startMatching: () => Promise<void>;
+  loadCollection: (file: File) => Promise<void>;
   setView: (v: View) => void;
   /** Artist the story should scroll to when it opens. */
   libraryArtist: string | null;
@@ -88,6 +94,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   events: [],
   genres: {},
   genresAreDemo: false,
+  origins: {},
+  collectionStats: null,
+  collectionError: null,
   matchState: 'idle',
   matchProgress: { done: 0, total: 0 },
   matchError: null,
@@ -116,6 +125,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       events: buildDemoEvents(),
       genres: { ...DEMO_GENRES },
       genresAreDemo: true,
+      origins: {},
+      collectionStats: null,
+      collectionError: null,
       matchState: 'done',
       matchProgress: { done: 0, total: 0 },
       matchError: null,
@@ -190,6 +202,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         events,
         genres: {},
         genresAreDemo: false,
+        origins: {},
+        collectionStats: null,
+        collectionError: null,
         matchState: 'idle',
         matchProgress: { done: 0, total: 0 },
         matchError: null,
@@ -231,6 +246,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  loadCollection: async (file) => {
+    try {
+      const { origins, stats } = await readCollectionFile(file);
+      // Keep only artists that are in the loaded history: nothing else is kept in memory.
+      const mine = new Set(get().aggregates.map((a) => normalizeArtistName(a.artist)));
+      const kept: Record<string, ArtistOrigin> = {};
+      for (const [k, v] of Object.entries(origins)) if (mine.has(k)) kept[k] = v;
+      set({ origins: kept, collectionStats: stats, collectionError: null });
+    } catch (err) {
+      set({
+        collectionError: err instanceof Error ? err.message : 'Could not read this file.',
+      });
+    }
+  },
+
   setView: (view) => set({ view }),
   setLibraryArtist: (libraryArtist) => set({ libraryArtist }),
   setArtistChapter: (artistChapter) => set({ artistChapter }),
@@ -253,6 +283,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       events: [],
       genres: {},
       genresAreDemo: false,
+      origins: {},
+      collectionStats: null,
+      collectionError: null,
       matchState: 'idle',
       matchProgress: { done: 0, total: 0 },
       matchError: null,

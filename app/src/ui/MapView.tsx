@@ -3,6 +3,8 @@ import { chapters, filterToMonths, fmtMinutes, rangeMonthKeys, topTracks } from 
 import { countryForAlpha2, worldShapes, WORLD_H, WORLD_W, type CountryShape } from '../data/geo';
 import type { MonthBucket, PlayAggregate } from '../data/types';
 import { useAppStore } from '../state/store';
+import { normalizeArtistName } from '../data/genreService';
+import { CollectionImport } from './CollectionImport';
 import { OptInGate } from './OptIn';
 import { groupHue } from './theme';
 import { Card, CardAside, Section } from './primitives';
@@ -25,6 +27,7 @@ interface CountryPin {
  */
 export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAggregate[] }) {
   const genres = useAppStore((s) => s.genres);
+  const origins = useAppStore((s) => s.origins);
   const genresAreDemo = useAppStore((s) => s.genresAreDemo);
   const matchState = useAppStore((s) => s.matchState);
   const source = useAppStore((s) => s.source);
@@ -61,9 +64,10 @@ export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAgg
     const noOrigin = new Map<string, number>();
     for (const a of rangedAggs) {
       const g = genres[a.artist];
-      const shape = countryForAlpha2(g?.origin?.country);
+      const origin = origins[normalizeArtistName(a.artist)] ?? g?.origin;
+      const shape = countryForAlpha2(origin?.country);
       const min = a.ms / MS_PER_MIN;
-      if (g && shape) {
+      if (shape) {
         let pin = byCountry.get(shape.id);
         if (!pin) {
           pin = { country: shape.name, shape, minutes: 0, hue: null, artists: [] };
@@ -83,8 +87,9 @@ export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAgg
       const byGroup = new Map<string, number>();
       for (const a of rangedAggs) {
         const g = genres[a.artist];
-        if (!g || countryForAlpha2(g.origin?.country)?.id !== pin.shape.id) continue;
-        const grp = g.groups[0];
+        const o = origins[normalizeArtistName(a.artist)] ?? g?.origin;
+        if (countryForAlpha2(o?.country)?.id !== pin.shape.id) continue;
+        const grp = g?.groups[0];
         if (grp) byGroup.set(grp, (byGroup.get(grp) ?? 0) + a.ms);
       }
       const top = [...byGroup.entries()].sort((x, y) => y[1] - x[1])[0];
@@ -107,11 +112,12 @@ export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAgg
         .sort((a, b) => b.minutes - a.minutes),
       route,
     };
-  }, [rangedAggs, rangedMonths, genres]);
+  }, [rangedAggs, rangedMonths, genres, origins]);
 
   const maxMin = pins[0]?.minutes ?? 1;
   const sel = pins.find((p) => p.shape.id === selected) ?? null;
-  const gated = source === 'export' && matchState === 'idle';
+  const hasCollection = Object.keys(origins).length > 0;
+  const gated = source === 'export' && matchState === 'idle' && !hasCollection;
 
   // Place each label below its pin, else above it; skip a label that would still overlap one already placed
   // (every country stays in the list under the map).
@@ -159,20 +165,23 @@ export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAgg
 
   return (
     <>
-      {source === 'export' && <OptInGate what="World map and genres" plural />}
+      {source === 'export' && <CollectionImport />}
+      {source === 'export' && <OptInGate what={hasCollection ? 'Genres' : 'World map and genres'} plural />}
 
       <Section
         id="tj-world-h"
         title={'Where your music comes from'}
         aside={
           <>
-            {genresAreDemo ? 'Demo tags' : 'MusicBrainz'}
+            {genresAreDemo ? 'Demo tags' : hasCollection ? 'MusicBrainz (CC0 origins)' : 'MusicBrainz'}
             {range !== 'all' ? ' - current range' : ''}
           </>
         }
       >
         {gated ? (
-          <p className="tj-note">Enable the lookup above to place your artists on the map.</p>
+          <p className="tj-note">
+            Load a collection file or enable the lookup above to place your artists on the map.
+          </p>
         ) : (
           <>
             <svg
