@@ -11,6 +11,7 @@ import {
 import { buildNarrative, type Narrative } from '../data/narrative';
 import type { PlayAggregate, PlayEvent } from '../data/types';
 import { useAppStore } from '../state/store';
+import { River } from './River';
 import { Button } from './primitives';
 import { CountryMap } from './CountryMap';
 
@@ -71,7 +72,7 @@ function barStyle(v: number, max: number, i: number): React.CSSProperties {
 function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number; total: number }) {
   const max = Math.max(1, ...beat.values);
   const stageClass =
-    beat.values.length > 0 || beat.map
+    beat.values.length > 0 || beat.map || beat.river
       ? 'tj-flow-stage'
       : String(beat.big).length > 6
         ? 'tj-flow-stage hero hero-text'
@@ -88,6 +89,7 @@ function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number
         <span>{beat.big}</span> <small>{beat.unit}</small>
       </p>
       {beat.map && <CountryMap data={beat.map} />}
+      {beat.river && <River data={beat.river} />}
       {beat.values.length > 0 && (
         <div className="tj-habit-bars" role="img" aria-label={`${beat.title}. ${beat.caption}`}>
           {beat.values.map((v, i) => (
@@ -117,6 +119,8 @@ function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number
 
 const LEGENDS: Record<string, string> = {
   'habit-skips': 'Counted from how each play ended.',
+  'habit-river':
+    "Counted from your plays. Width is minutes per month, smoothed over three months. The colors only tell the bands apart. Only each year's top two artists are drawn, and the last year may be partial.",
   'habit-picks': 'Counted from how each play began.',
   'habit-loops': 'Counted from play order and timestamps.',
   'habit-albums': 'Counted from album names on your plays.',
