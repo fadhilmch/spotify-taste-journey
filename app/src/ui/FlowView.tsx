@@ -10,7 +10,7 @@ import {
 import { buildNarrative, type Narrative } from '../data/narrative';
 import type { PlayAggregate, PlayEvent } from '../data/types';
 import { useAppStore } from '../state/store';
-import { DotPanel } from './NarrowWide';
+import { River } from './River';
 import { Button } from './primitives';
 
 const COLORS = ['#1ed760', '#f5c451', '#7aa7ff'];
@@ -70,7 +70,7 @@ function barStyle(v: number, max: number, i: number): React.CSSProperties {
 function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number; total: number }) {
   const max = Math.max(1, ...beat.values);
   const stageClass =
-    beat.values.length > 0 || beat.nw
+    beat.values.length > 0 || beat.river
       ? 'tj-flow-stage'
       : String(beat.big).length > 6
         ? 'tj-flow-stage hero hero-text'
@@ -86,18 +86,7 @@ function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number
       <p className="tj-flow-big">
         <span>{beat.big}</span> <small>{beat.unit}</small>
       </p>
-      {beat.nw && (
-        <div className="tj-nw-pair" role="group" aria-label="Narrowest and widest full year">
-          {[beat.nw.narrow, beat.nw.wide].map((y) => (
-            <figure key={y.year} className="tj-nw-fig">
-              <DotPanel year={y} />
-              <figcaption>
-                <strong>{y.year}</strong> {y.half} of {y.artists.toLocaleString('en-US')} artists
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      )}
+      {beat.river && <River data={beat.river} />}
       {beat.values.length > 0 && (
         <div className="tj-habit-bars" role="img" aria-label={`${beat.title}. ${beat.caption}`}>
           {beat.values.map((v, i) => (
@@ -127,8 +116,8 @@ function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number
 
 const LEGENDS: Record<string, string> = {
   'habit-skips': 'Counted from how each play ended.',
-  'habit-narrowwide':
-    'Green dots are the artists that make half the minutes. Only the most-played are drawn.',
+  'habit-river':
+    "Counted from your plays. Width is minutes per month, smoothed over three months. The colors only tell the bands apart. Only each year's top two artists are drawn, and the last year may be partial.",
   'habit-picks': 'Counted from how each play began.',
   'habit-loops': 'Counted from play order and timestamps.',
   'habit-albums': 'Counted from album names on your plays.',
