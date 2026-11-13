@@ -12,7 +12,7 @@ import {
   weekdayHistogram,
 } from './stats';
 import { artistFacts } from './artistFacts';
-import { rediscoveries } from './rediscovery';
+import { concentration, rediscoveries, type ConcentrationYear } from './rediscovery';
 import type { PlayAggregate, PlayEvent } from './types';
 
 /**
@@ -33,7 +33,9 @@ export interface HabitBeat {
   /** One label per bar. */
   labels: string[];
   /** Special chapters that carry an action. */
-  kind?: 'returned' | 'artist' | 'origins' | 'share';
+  kind?: 'returned' | 'artist' | 'origins' | 'share' | 'narrowwide';
+  /** For 'narrowwide': the narrowest and widest full years, and the partial latest year if any. */
+  nw?: { narrow: ConcentrationYear; wide: ConcentrationYear; partial: ConcentrationYear | null };
   artist?: string;
   /** Index of the highlighted bar; -1 for none. */
   peak: number;
@@ -239,7 +241,40 @@ export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = [])
       peak: barYears ? argMax(vals) : -1,
     });
   }
+  const nw = buildNarrowWideBeat(aggs);
+  if (nw) beats.push(nw);
   return beats;
+}
+
+/**
+ * Chapter: how many artists make half of a year's minutes. Only full years (12 months of data)
+ * are compared; a partial latest year is mentioned, never ranked.
+ */
+export function buildNarrowWideBeat(aggs: PlayAggregate[]): HabitBeat | null {
+  const all = concentration(aggs);
+  const full = all.filter((y) => !y.partial);
+  if (full.length < 2) return null;
+  const narrow = full.reduce((a, b) => (b.half < a.half ? b : a));
+  const wide = full.reduce((a, b) => (b.half > a.half ? b : a));
+  if (narrow.half === wide.half) return null;
+  const partial = all.find((y) => y.partial) ?? null;
+  const n = (v: number) => v.toLocaleString('en-US');
+  const partialNote = partial
+    ? ` ${partial.year} is not ranked because the data covers only part of it (${partial.half} artists make half so far).`
+    : '';
+  return {
+    id: 'habit-narrowwide',
+    kind: 'narrowwide',
+    label: 'Narrow and wide',
+    title: 'When your taste narrows',
+    big: `${narrow.half} vs ${wide.half}`,
+    unit: 'artists making half of your listening, narrowest vs widest full year',
+    caption: `In ${narrow.year}, ${narrow.half} of the ${n(narrow.artists)} artists you played made up half of your minutes. In ${wide.year} it took ${wide.half} of ${n(wide.artists)}.${partialNote} The counts cover every artist; the dots draw only each year's ${narrow.shares.length} most-played.`,
+    values: [],
+    labels: [],
+    peak: -1,
+    nw: { narrow, wide, partial },
+  };
 }
 
 /** Chapter for names that were played a lot and then went quiet (counted from plays). */

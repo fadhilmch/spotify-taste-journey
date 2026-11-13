@@ -74,3 +74,28 @@ describe('concentration', () => {
     expect(concentration(data)[0].partial).toBe(false);
   });
 });
+
+describe('narrow and wide chapter', () => {
+  const month = (y: number, m: number) => `${y}-${String(m).padStart(2, '0')}`;
+  const year = (y: number, shape: number[]) =>
+    Array.from({ length: 12 }, (_, m) => shape.map((v, i) => mk(month(y, m + 1), `A${y}-${i}`, v))).flat();
+  it('compares only full years and mentions a partial one without ranking it', async () => {
+    const { buildNarrowWideBeat } = await import('../data/habits');
+    const data = [
+      ...year(2020, [90, 5, 5]), // narrow: 1 artist makes half
+      ...year(2021, [10, 10, 10, 10, 10, 10]), // wide: 3 artists make half
+      mk('2022-01', 'P1', 100), // partial year with 1 artist: must not be ranked
+    ];
+    const b = buildNarrowWideBeat(data)!;
+    expect(b.nw!.narrow.year).toBe('2020');
+    expect(b.nw!.wide.year).toBe('2021');
+    expect(b.nw!.partial?.year).toBe('2022');
+    expect(b.big).toBe('1 vs 3');
+    expect(b.caption).toMatch(/2022 is not ranked/);
+  });
+  it('returns nothing without two full years or without a difference', async () => {
+    const { buildNarrowWideBeat } = await import('../data/habits');
+    expect(buildNarrowWideBeat(year(2020, [50, 50]))).toBeNull();
+    expect(buildNarrowWideBeat([...year(2020, [50, 50]), ...year(2021, [50, 50])])).toBeNull();
+  });
+});

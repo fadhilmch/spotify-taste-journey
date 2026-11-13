@@ -3,7 +3,6 @@ import { exploration, rediscoveries, yearEras } from '../data/rediscovery';
 import { fmtMinutes } from '../data/stats';
 import type { PlayAggregate } from '../data/types';
 import { useAppStore } from '../state/store';
-import { NarrowWide } from './NarrowWide';
 import { Card, CardAside } from './primitives';
 import { artistBackground } from './theme';
 
@@ -60,8 +59,6 @@ export function RediscoverView({ aggs }: { aggs: PlayAggregate[] }) {
           </ol>
         )}
       </Card>
-
-      <NarrowWide aggs={aggs} />
 
       <Card id="tj-eras-h" title="Your listening eras" aside={<CardAside>top 3 each year</CardAside>}>
         <ol className="tj-mini">
