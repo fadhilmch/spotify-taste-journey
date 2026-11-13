@@ -257,10 +257,11 @@ export function buildNarrowWideBeat(aggs: PlayAggregate[]): HabitBeat | null {
   const narrow = full.reduce((a, b) => (b.half < a.half ? b : a));
   const wide = full.reduce((a, b) => (b.half > a.half ? b : a));
   if (narrow.half === wide.half) return null;
-  const partial = all.find((y) => y.partial) ?? null;
+  const partials = all.filter((y) => y.partial);
   const n = (v: number) => v.toLocaleString('en-US');
-  const partialNote = partial
-    ? ` ${partial.year} is not ranked because the data covers only part of it (${partial.half} artists make half so far).`
+  const names = partials.map((y) => y.year).join(' and ');
+  const partialNote = partials.length
+    ? ` ${names} ${partials.length > 1 ? 'are' : 'is'} not ranked because the data covers only part of ${partials.length > 1 ? 'them' : 'it'}.`
     : '';
   return {
     id: 'habit-narrowwide',
@@ -273,7 +274,7 @@ export function buildNarrowWideBeat(aggs: PlayAggregate[]): HabitBeat | null {
     values: [],
     labels: [],
     peak: -1,
-    nw: { narrow, wide, partial },
+    nw: { narrow, wide, partial: partials[0] ?? null },
   };
 }
 
