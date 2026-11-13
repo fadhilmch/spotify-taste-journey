@@ -20,6 +20,19 @@ import type { PlayAggregate, PlayEvent } from './types';
  * in the time zone of the browser that reads the file.
  */
 
+export interface RiverBand {
+  artist: string;
+  /** Smoothed minutes per month, one value per month in `months`. */
+  minutes: number[];
+  total: number;
+}
+export interface RiverData {
+  months: string[];
+  bands: RiverBand[];
+  /** Names that were a year's most played, in time order; these get labels. */
+  leaders: string[];
+}
+
 export interface HabitBeat {
   id: string;
   label: string;
@@ -33,7 +46,8 @@ export interface HabitBeat {
   /** One label per bar. */
   labels: string[];
   /** Special chapters that carry an action. */
-  kind?: 'returned' | 'artist' | 'origins' | 'share';
+  kind?: 'returned' | 'artist' | 'origins' | 'share' | 'river';
+  river?: RiverData;
   artist?: string;
   /** Index of the highlighted bar; -1 for none. */
   peak: number;
@@ -239,6 +253,8 @@ export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = [])
       peak: barYears ? argMax(vals) : -1,
     });
   }
+  const river = buildRiverBeat(aggs);
+  if (river) beats.push(river);
   return beats;
 }
 
@@ -310,3 +326,83 @@ export const SHARE_BEAT: HabitBeat = {
   labels: [],
   peak: -1,
 };
+
+function smooth3(v: number[]): number[] {
+  return v.map((_, i) => {
+    const a = v[Math.max(0, i - 1)];
+    const b = v[i];
+    const c = v[Math.min(v.length - 1, i + 1)];
+    return (a + b * 2 + c) / 4;
+  });
+}
+
+/**
+ * Chapter: the top artists' months as one flowing river, oldest at the top. Band width is
+ * minutes per month (smoothed over three months); the pale halo behind is everything else.
+ */
+export function buildRiverBeat(aggs: PlayAggregate[]): HabitBeat | null {
+  if (aggs.length === 0) return null;
+  const months = [...new Set(aggs.map((a) => a.month))].sort();
+  if (months.length < 12) return null;
+  const idx = new Map(months.map((m, i) => [m, i]));
+  const per = new Map<string, number[]>();
+  const all = new Array<number>(months.length).fill(0);
+  for (const a of aggs) {
+    const i = idx.get(a.month)!;
+    all[i] += a.ms / 60000;
+    let row = per.get(a.artist);
+    if (!row) {
+      row = new Array<number>(months.length).fill(0);
+      per.set(a.artist, row);
+    }
+    row[i] += a.ms / 60000;
+  }
+  const all2 = [...per.entries()].map(([artist, minutes]) => ({
+    artist,
+    minutes,
+    total: minutes.reduce((t, v) => t + v, 0),
+  }));
+  const years = [...new Set(months.map((m) => m.slice(0, 4)))];
+  const chosen = new Map<string, boolean>();
+  for (const yr of years) {
+    const ranked = all2
+      .map((r) => ({
+        r,
+        v: r.minutes.reduce((t, x, i) => (months[i].startsWith(yr) ? t + x : t), 0),
+      }))
+      .sort((x, y) => y.v - x.v);
+    chosen.set(ranked[0].r.artist, true);
+    if (ranked[1] && !chosen.has(ranked[1].r.artist)) chosen.set(ranked[1].r.artist, false);
+  }
+  const ranked = all2.filter((r) => chosen.has(r.artist));
+  const leaders = ranked.filter((r) => chosen.get(r.artist)).length;
+  const grand = all.reduce((t, v) => t + v, 0);
+  if (ranked.length < 3 || grand <= 0) return null;
+  const mid = (b: { minutes: number[] }) => {
+    const t = b.minutes.reduce((acc, v) => acc + v, 0);
+    return b.minutes.reduce((acc, v, i) => acc + v * i, 0) / t;
+  };
+  ranked.sort((x, y) => mid(x) - mid(y));
+  const lastMonth = months[months.length - 1];
+  const partialNote = lastMonth.endsWith('-12')
+    ? ''
+    : ` ${lastMonth.slice(0, 4)} is a partial year that ends in ${lastMonth}.`;
+  const share = ranked.reduce((t, r) => t + r.total, 0) / grand;
+  return {
+    id: 'habit-river',
+    kind: 'river',
+    label: 'Your river',
+    title: 'Your listening, one river',
+    big: `${leaders} artists`,
+    unit: `took turns as your most played, year after year`,
+    caption: `The river follows each year's top two artists (${ranked.length} in all). Time runs from the top (${months[0]}) to now (${months[months.length - 1]}). Width is minutes per month, smoothed over three months. Together they are ${Math.round(share * 100)}% of all your minutes; everyone else is not drawn.${partialNote}`,
+    values: [],
+    labels: [],
+    peak: -1,
+    river: {
+      months,
+      bands: ranked.map((b) => ({ artist: b.artist, minutes: smooth3(b.minutes), total: b.total })),
+      leaders: ranked.filter((r) => chosen.get(r.artist)).map((r) => r.artist),
+    },
+  };
+}
