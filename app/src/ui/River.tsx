@@ -1,4 +1,5 @@
 import type { RiverData } from '../data/habits';
+import { LABEL_SIZE, placeLabels, type LabelWish } from './riverLabels';
 
 const W = 320;
 const H = 440;
@@ -42,31 +43,16 @@ export function River({ data }: { data: RiverData }) {
   const sums = data.months.map((_, i) => data.bands.reduce((t, b) => t + b.minutes[i], 0));
   const k = (HALF * 1.5) / Math.max(...sums);
   const px = (v: number) => cx + v * k;
-  const labels: Array<{ artist: string; x: number; y: number; side: 'l' | 'r'; at: number }> = [];
-  const lastY = { l: -99, r: -99 };
-  const found = data.bands
-    .map((b, j) => {
-      if (!data.leaders.includes(b.artist)) return null;
-      let at = 0;
-      b.minutes.forEach((v, i) => {
-        if (v > b.minutes[at]) at = i;
-      });
-      return { artist: b.artist, at, left: px(lo[j][at]), right: px(stack[j][at]) };
-    })
-    .filter((v): v is NonNullable<typeof v> => v !== null)
-    .sort((a, b) => a.at - b.at);
-  for (const f of found) {
-    const w = f.artist.length * 5.2 + 4;
-    const roomL = f.left - 36;
-    const roomR = W - 4 - f.right;
-    const gap = (side: 'l' | 'r') => y(f.at) - lastY[side];
-    let side: 'l' | 'r' = roomR >= w || roomR >= roomL ? 'r' : 'l';
-    if (gap(side) < 12 && gap(side === 'r' ? 'l' : 'r') >= 12) side = side === 'r' ? 'l' : 'r';
-    const ly = Math.max(y(f.at), lastY[side] + 12);
-    lastY[side] = ly;
-    const x = side === 'r' ? Math.min(f.right + 5, W - 4 - w) : Math.max(f.left - 5, 36 + w);
-    labels.push({ artist: f.artist, x, y: ly, side, at: f.at });
-  }
+  const wishes: LabelWish[] = [];
+  data.bands.forEach((b, j) => {
+    if (!data.leaders.includes(b.artist)) return;
+    let at = 0;
+    b.minutes.forEach((v, i) => {
+      if (v > b.minutes[at]) at = i;
+    });
+    wishes.push({ artist: b.artist, y: y(at), cx: (px(lo[j][at]) + px(stack[j][at])) / 2 });
+  });
+  const labels = placeLabels(wishes, W, T + LABEL_SIZE, H - B);
   const years: Array<{ label: string; i: number }> = [];
   data.months.forEach((m, i) => {
     if (m.endsWith('-01') || i === 0) years.push({ label: m.slice(0, 4), i });
@@ -104,16 +90,16 @@ export function River({ data }: { data: RiverData }) {
           {yr.label}
         </text>
       ))}
-      {labels.map((l) => (
+      {labels.map((l, i) => (
         <text
           key={l.artist}
           x={l.x}
-          y={l.y + 3}
-          textAnchor={l.side === 'r' ? 'start' : 'end'}
+          y={l.y + 4}
+          textAnchor="middle"
           className="tj-river-name"
-          style={{ animationDelay: `${1.2 + (l.at / n) * 2}s` }}
+          style={{ animationDelay: `${1.2 + (i / Math.max(1, labels.length)) * 2}s` }}
         >
-          {l.artist}
+          {l.text}
         </text>
       ))}
     </svg>
