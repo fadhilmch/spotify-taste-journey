@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   buildArtistBeat,
+  buildCountryMapBeat,
   buildHabitBeats,
   buildReturnedBeat,
   ORIGINS_BEAT,
@@ -11,6 +12,7 @@ import { buildNarrative, type Narrative } from '../data/narrative';
 import type { PlayAggregate, PlayEvent } from '../data/types';
 import { useAppStore } from '../state/store';
 import { Button } from './primitives';
+import { CountryMap } from './CountryMap';
 
 const COLORS = ['#1ed760', '#f5c451', '#7aa7ff'];
 const W = 640;
@@ -69,7 +71,7 @@ function barStyle(v: number, max: number, i: number): React.CSSProperties {
 function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number; total: number }) {
   const max = Math.max(1, ...beat.values);
   const stageClass =
-    beat.values.length > 0
+    beat.values.length > 0 || beat.map
       ? 'tj-flow-stage'
       : String(beat.big).length > 6
         ? 'tj-flow-stage hero hero-text'
@@ -85,6 +87,7 @@ function HabitStage({ beat, chapter, total }: { beat: HabitBeat; chapter: number
       <p className="tj-flow-big">
         <span>{beat.big}</span> <small>{beat.unit}</small>
       </p>
+      {beat.map && <CountryMap data={beat.map} />}
       {beat.values.length > 0 && (
         <div className="tj-habit-bars" role="img" aria-label={`${beat.title}. ${beat.caption}`}>
           {beat.values.map((v, i) => (
@@ -117,6 +120,8 @@ const LEGENDS: Record<string, string> = {
   'habit-picks': 'Counted from how each play began.',
   'habit-loops': 'Counted from play order and timestamps.',
   'habit-albums': 'Counted from album names on your plays.',
+  'habit-countrymap':
+    'Grey countries have none of your minutes. Not placed is the share of minutes with no country on the map.',
 };
 
 function Stage({ story, active, total }: { story: Narrative; active: number; total: number }) {
@@ -283,15 +288,18 @@ function MonthStrip({
 export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: PlayEvent[] }) {
   const story = React.useMemo(() => buildNarrative(aggs), [aggs]);
   const artistChapter = useAppStore((st) => st.artistChapter);
+  const origins = useAppStore((st) => st.origins);
   const extras = React.useMemo(() => {
     const list: HabitBeat[] = [...buildHabitBeats(events, aggs)];
+    const cm = buildCountryMapBeat(aggs, origins);
+    if (cm) list.push(cm);
     const ret = buildReturnedBeat(aggs);
     if (ret) list.push(ret);
     const art = artistChapter ? buildArtistBeat(aggs, artistChapter) : null;
     if (art) list.push(art);
     list.push(ORIGINS_BEAT, SHARE_BEAT);
     return list;
-  }, [events, aggs, artistChapter]);
+  }, [events, aggs, artistChapter, origins]);
   const nStory = story ? story.beats.length : 0;
   const total = nStory + extras.length;
   const [active, setActive] = React.useState(0);

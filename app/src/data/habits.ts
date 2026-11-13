@@ -13,12 +13,21 @@ import {
 } from './stats';
 import { artistFacts } from './artistFacts';
 import { rediscoveries } from './rediscovery';
-import type { PlayAggregate, PlayEvent } from './types';
+import { countryForAlpha2, worldShapes } from './geo';
+import { normalizeArtistName } from './genreService';
+import type { ArtistOrigin, PlayAggregate, PlayEvent } from './types';
 
 /**
  * Listening habits as story chapters. Counted from play timestamps only,
  * in the time zone of the browser that reads the file.
  */
+
+export interface CountryMapData {
+  /** Countries with a name match, by minutes. `id` is the map shape id. */
+  countries: Array<{ id: string; name: string; minutes: number; share: number }>;
+  /** Share of all minutes (0-100, one decimal) with no country on the map. */
+  unplacedShare: number;
+}
 
 export interface HabitBeat {
   id: string;
@@ -33,7 +42,8 @@ export interface HabitBeat {
   /** One label per bar. */
   labels: string[];
   /** Special chapters that carry an action. */
-  kind?: 'returned' | 'artist' | 'origins' | 'share';
+  kind?: 'returned' | 'artist' | 'origins' | 'share' | 'map';
+  map?: CountryMapData;
   artist?: string;
   /** Index of the highlighted bar; -1 for none. */
   peak: number;
@@ -310,3 +320,62 @@ export const SHARE_BEAT: HabitBeat = {
   labels: [],
   peak: -1,
 };
+
+/**
+ * Chapter: where the listening comes from, as a world map. Countries come from an imported
+ * MusicBrainz collection by name match (not verified identity). Plays whose artist has no
+ * accepted country on the map are one "not placed" share, so the placed share is visible.
+ */
+export function buildCountryMapBeat(
+  aggs: PlayAggregate[],
+  origins: Record<string, ArtistOrigin>,
+): HabitBeat | null {
+  if (aggs.length === 0 || Object.keys(origins).length === 0) return null;
+  const byId = new Map<string, number>();
+  let grand = 0;
+  let placed = 0;
+  let offMap = 0;
+  for (const a of aggs) {
+    const min = a.ms / 60000;
+    grand += min;
+    const code = origins[normalizeArtistName(a.artist)]?.country;
+    const shape = countryForAlpha2(code);
+    if (!shape) {
+      if (code) offMap += min;
+      continue;
+    }
+    placed += min;
+    byId.set(shape.id, (byId.get(shape.id) ?? 0) + min);
+  }
+  if (grand <= 0 || byId.size < 2) return null;
+  const countries = [...byId.entries()]
+    .map(([id, minutes]) => ({
+      id,
+      name: worldShapes().byNumeric.get(id)?.name ?? id,
+      minutes,
+      share: Math.round((minutes / grand) * 1000) / 10,
+    }))
+    .sort((a, b) => b.minutes - a.minutes);
+  const placedShare = Math.round((placed / grand) * 1000) / 10;
+  const unplacedShare = Math.round((100 - placedShare) * 10) / 10;
+  const offShare = Math.round((offMap / grand) * 1000) / 10;
+  const offMapNote = offShare > 0 ? `, or in a country this map has no shape for (${offShare}%)` : '';
+  const months = [...new Set(aggs.map((a) => a.month))].sort();
+  const lastMonth = months[months.length - 1];
+  const partialNote = lastMonth.endsWith('-12')
+    ? ''
+    : ` The last year (${lastMonth.slice(0, 4)}) is partial and ends in ${lastMonth}.`;
+  return {
+    id: 'habit-countrymap',
+    kind: 'map',
+    label: 'Where it comes from',
+    title: 'Where your listening comes from',
+    big: `${placedShare}%`,
+    unit: 'of your minutes are placed on the map',
+    caption: `${countries.length} countries, from the MusicBrainz file you added, matched by artist name. A name match is not a verified identity, so a namesake can land in the wrong country. The other ${unplacedShare}% of minutes is not placed: no clear match, no country on record, or not in the file${offMapNote}. Country is the artist country MusicBrainz records, not a verified birthplace or nationality, and not where you listened.${partialNote}`,
+    values: [],
+    labels: [],
+    peak: -1,
+    map: { countries, unplacedShare },
+  };
+}
