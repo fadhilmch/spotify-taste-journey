@@ -345,6 +345,7 @@ export const SHARE_BEAT: HabitBeat = {
 export function buildCountryMapBeat(
   aggs: PlayAggregate[],
   origins: Record<string, ArtistOrigin>,
+  sourceLabel: 'file' | 'lookup' | 'demo' = 'file',
 ): HabitBeat | null {
   if (aggs.length === 0 || Object.keys(origins).length === 0) return null;
   const byId = new Map<string, number>();
@@ -381,6 +382,12 @@ export function buildCountryMapBeat(
   const partialNote = lastMonth.endsWith('-12')
     ? ''
     : ` The last year (${lastMonth.slice(0, 4)}) is partial and ends in ${lastMonth}.`;
+  const sourcePhrase =
+    sourceLabel === 'lookup'
+      ? 'from the MusicBrainz lookup you ran'
+      : sourceLabel === 'demo'
+        ? 'from invented demo origins'
+        : 'from the MusicBrainz file you added';
   return {
     id: 'habit-countrymap',
     kind: 'map',
@@ -388,7 +395,7 @@ export function buildCountryMapBeat(
     title: 'Where your listening comes from',
     big: `${placedShare}%`,
     unit: 'of your minutes are placed on the map',
-    caption: `${countries.length} countries, from the MusicBrainz file you added, matched by artist name. A name match is not a verified identity, so a namesake can land in the wrong country. The other ${unplacedShare}% of minutes is not placed: no clear match, no country on record, or not in the file${offMapNote}. Country is the artist country MusicBrainz records, not a verified birthplace or nationality, and not where you listened.${partialNote}`,
+    caption: `${countries.length} countries, ${sourcePhrase}, matched by artist name. A name match is not a verified identity, so a namesake can land in the wrong country. The other ${unplacedShare}% of minutes is not placed: no clear match, no country on record, or not in the file${offMapNote}. Country is the artist country MusicBrainz records, not a verified birthplace or nationality, and not where you listened.${partialNote}`,
     values: [],
     labels: [],
     peak: -1,
@@ -432,12 +439,18 @@ export function buildRiverBeat(aggs: PlayAggregate[]): HabitBeat | null {
     total: minutes.reduce((t, v) => t + v, 0),
   }));
   const years = [...new Set(months.map((m) => m.slice(0, 4)))];
+  // One pass per artist: minutes per year (same summation order as a per-year reduce).
+  const yearly = all2.map((r) => {
+    const by = new Map<string, number>();
+    r.minutes.forEach((x, i) => by.set(months[i].slice(0, 4), (by.get(months[i].slice(0, 4)) ?? 0) + x));
+    return by;
+  });
   const chosen = new Map<string, boolean>();
   for (const yr of years) {
     const ranked = all2
-      .map((r) => ({
+      .map((r, k) => ({
         r,
-        v: r.minutes.reduce((t, x, i) => (months[i].startsWith(yr) ? t + x : t), 0),
+        v: yearly[k].get(yr) ?? 0,
       }))
       .sort((x, y) => y.v - x.v);
     chosen.set(ranked[0].r.artist, true);
@@ -464,7 +477,7 @@ export function buildRiverBeat(aggs: PlayAggregate[]): HabitBeat | null {
     title: 'Your listening, one river',
     big: `${leaders} artists`,
     unit: `took turns as your most played, year after year`,
-    caption: `The river follows each year's top two artists (${ranked.length} in all). Time runs from the top (${months[0]}) to now (${months[months.length - 1]}). Width is minutes per month, smoothed over three months. Together they are ${Math.round(share * 100)}% of all your minutes; everyone else is not drawn.${partialNote}`,
+    caption: `The river draws each year's top two artists: ${ranked.length} bands in all, of which ${leaders} were a year's most played (the labelled ones). Time runs from the top (${months[0]}) to now (${months[months.length - 1]}). Width is minutes per month, smoothed over three months. Together they are ${Math.round(share * 100)}% of all your minutes; everyone else is not drawn.${partialNote}`,
     values: [],
     labels: [],
     peak: -1,
