@@ -40,6 +40,8 @@ describe('DataMeta', () => {
       screen.getByText(/1 file had no listening history and was skipped: Playlist1.json/),
     ).toBeInTheDocument();
     expect(screen.getByText(/Only listening fields/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'How this is counted' }));
+    expect(useAppStore.getState().view).toBe('method');
   });
 
   it('renders nothing when no export is loaded', () => {

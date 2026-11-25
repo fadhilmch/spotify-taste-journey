@@ -61,7 +61,7 @@ describe('App', () => {
     // Discoveries: tapping a month reveals the artists first heard then.
     await user.click(screen.getAllByRole('button', { name: /[1-9]\d* new artist/i })[0]);
     expect(screen.getByText(/first listen/i)).toBeInTheDocument();
-    expect(screen.getByText(/Narration - not enabled yet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Narration/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'World' }));
     expect(
@@ -92,8 +92,12 @@ describe('App', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Demo data' }));
-    await user.click(screen.getByRole('button', { name: 'Guide' }));
+    await user.click(screen.getByRole('button', { name: 'About' }));
     expect(screen.getByText('How to get your export')).toBeInTheDocument();
+    // About has two pages; the method page is reachable from the section chips.
+    await user.click(screen.getByRole('button', { name: 'How this is counted' }));
+    expect(useAppStore.getState().view).toBe('method');
+    await user.click(screen.getByRole('button', { name: 'Get your export' }));
     expect(screen.queryByRole('img', { name: /Monthly listening minutes/i })).not.toBeInTheDocument();
     useAppStore.getState().setView('journey');
   });
@@ -115,21 +119,22 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Explore' }));
     expect(screen.getByText('Worth coming back to')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '6 months' })).not.toBeInTheDocument();
+    expect(document.querySelector('.tj-player')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Month by month' }));
     expect(screen.getByRole('button', { name: '6 months' })).toBeInTheDocument();
+    // The month player belongs to the pages that read the selected month.
+    expect(document.querySelector('.tj-player')).not.toBeNull();
     await user.click(screen.getByRole('button', { name: 'Library' }));
     expect(screen.getByRole('button', { name: '6 months' })).toBeInTheDocument();
-    expect(screen.getByText(/Scope: follows the range above/)).toBeInTheDocument();
     // Share draws its card from the range, so the chips are shown there too.
     await user.click(screen.getByRole('button', { name: 'Share' }));
     expect(screen.getByRole('button', { name: '6 months' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '6 months' }));
-    expect(screen.getByText(/Scope: follows the range above \(6 months\)/)).toBeInTheDocument();
     // The Top genre toggle is not offered.
     expect(screen.queryByRole('checkbox', { name: /Top genre/i })).not.toBeInTheDocument();
     // Pages without chips say they cover all time.
     await user.click(screen.getByRole('button', { name: 'Explore' }));
-    expect(screen.getByText(/Scope: all time/)).toBeInTheDocument();
+    expect(screen.queryByText(/Scope:/)).not.toBeInTheDocument();
   });
 
   it('ends the story with links into the rest of the app', async () => {
@@ -170,7 +175,7 @@ describe('App', () => {
     useAppStore.getState().setView('flow');
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Demo data' }));
-    expect(screen.getByText('When you listen')).toBeInTheDocument();
+    expect(screen.getByText(/The hour you reach for music/)).toBeInTheDocument();
   });
 
   it('links a story chapter to its artist in the library', async () => {
@@ -189,11 +194,14 @@ describe('App', () => {
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Demo data' }));
     expect(document.querySelectorAll('.tj-strip i').length).toBeGreaterThan(10);
-    expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
-    expect(screen.getByText('The story always uses all time.')).toBeInTheDocument();
     // The demo already has sample origins, so the cards must not claim to be locked.
     expect(screen.queryByText('Locked until you add artist origins')).toBeNull();
-    expect(screen.getByText(/demo already has sample origins loaded/i)).toBeInTheDocument();
+    // ...and Act III shows the country map instead of the origins step.
+    expect(screen.getByText('Where your listening comes from')).toBeInTheDocument();
+    expect(screen.queryByText(/a lookup that you choose to start/i)).toBeNull();
+    for (const act of ['Who you were', 'How you listen', 'Where it comes from']) {
+      expect(screen.getByRole('heading', { name: act })).toBeInTheDocument();
+    }
     await user.click(screen.getByRole('button', { name: /^Make a share card from / }));
     expect(useAppStore.getState().view).toBe('share');
     expect(useAppStore.getState().shareFocus).not.toBeNull();
