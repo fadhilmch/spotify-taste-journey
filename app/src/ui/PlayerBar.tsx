@@ -41,6 +41,10 @@ export function PlayerBar({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
     return () => clearInterval(t);
   }, [playing, months, idx, setMonth, setPlaying]);
 
+  // Leaving the pages that show the bar pauses playback, so coming back never restarts it by itself.
+  // The bar stays mounted when moving between its own pages, so playback carries on there.
+  React.useEffect(() => () => setPlaying(false), [setPlaying]);
+
   if (!cur) return null;
   return (
     <div className="tj-player">
