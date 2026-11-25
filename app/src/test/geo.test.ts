@@ -35,6 +35,8 @@ describe('artist origins', () => {
     expect(DEMO_GENRES['Lost Cartographer']).toBeUndefined();
     const aggs = buildDemoAggregates();
     expect(aggs.some((a) => a.artist === 'Lost Cartographer')).toBe(true);
+    const countries = new Set(Object.values(DEMO_GENRES).map((g) => g.origin?.country));
+    expect(countries.size).toBeGreaterThanOrEqual(8);
   });
 
   it('MusicBrainz lookup captures country and area when present', async () => {
