@@ -47,17 +47,25 @@ function classifyJson(json: unknown): { format: ExportFormat; rows: number } | n
   return null;
 }
 
-/** Classify one picked file by its JSON contents. */
-export function classifyFile(file: PickedFile): FileReport {
+/**
+ * Classify one picked file by its JSON contents and hand back the parsed
+ * document, so callers (the worker) do not parse a large file twice.
+ */
+export function classifyFileParsed(file: PickedFile): { report: FileReport; json?: unknown } {
   let json: unknown;
   try {
     json = JSON.parse(file.text);
   } catch {
-    return { name: file.name, status: 'unreadable' };
+    return { report: { name: file.name, status: 'unreadable' } };
   }
   const hit = classifyJson(json);
-  if (hit === null) return { name: file.name, status: 'not-history' };
-  return { name: file.name, status: 'loaded', format: hit.format, rows: hit.rows };
+  if (hit === null) return { report: { name: file.name, status: 'not-history' } };
+  return { report: { name: file.name, status: 'loaded', format: hit.format, rows: hit.rows }, json };
+}
+
+/** Classify one picked file by its JSON contents. */
+export function classifyFile(file: PickedFile): FileReport {
+  return classifyFileParsed(file).report;
 }
 
 /**

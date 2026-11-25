@@ -46,8 +46,9 @@ export function Onboarding() {
       <Kicker>Private - runs in your browser</Kicker>
       <p className="tj-onboard-title">Your listening, turned into a journey.</p>
       <p className="tj-onboard-body">
-        Take the demo for a spin, or drop in your own Spotify streaming history JSON files - select them all
-        together, they combine into one timeline. Everything is read in this tab only - nothing is uploaded.
+        Take the demo for a spin, or drop in your own Spotify export - the ZIP as it came, or its streaming
+        history JSON files (select them all together, they combine into one timeline). Everything is read in
+        this tab only - nothing is uploaded.
       </p>
       <div className="tj-onboard-actions">
         <Button onClick={loadDemo}>Try the demo journey</Button>
@@ -56,7 +57,8 @@ export function Onboarding() {
         </Button>
         <FileInput
           inputRef={inputRef}
-          label="Choose your Spotify streaming history JSON files"
+          label="Choose your Spotify export ZIP or streaming history JSON files"
+          accept=".json,.zip,application/json,application/zip"
           onFiles={(fs) => void loadFiles(fs)}
         />
       </div>
@@ -79,8 +81,8 @@ export function Onboarding() {
 }
 
 const ONBOARD_VIEWS: Array<[string, string]> = [
-  ['Journey', 'Minutes month by month, who led each month, and the eras between.'],
-  ['Story', 'Your eras, discoveries, sessions and habits as chapters.'],
+  ['Story', 'One scroll through your years: who led, who came back, how you listen.'],
+  ['Month by month', 'Minutes per month and the artists who topped each one.'],
   ['World', 'Where the artists you play come from, on the map.'],
   ['Spectrum', 'Your genre mix and how it moves over time.'],
 ];

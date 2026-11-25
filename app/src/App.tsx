@@ -20,7 +20,7 @@ import { StoryView } from './ui/StoryView';
 import { ErrorState, LoadingState, Onboarding } from './ui/states';
 
 const RANGES = [
-  { id: '4w', label: '4 weeks' },
+  { id: '4w', label: 'Last month' },
   { id: '6m', label: '6 months' },
   { id: '1y', label: '1 year' },
   { id: 'all', label: 'All time' },
@@ -110,10 +110,6 @@ export default function App() {
   const setView = useAppStore((s) => s.setView);
   const range = useAppStore((s) => s.range);
   const setRange = useAppStore((s) => s.setRange);
-  const month = useAppStore((s) => s.month);
-  const setMonth = useAppStore((s) => s.setMonth);
-  const playing = useAppStore((s) => s.playing);
-  const setPlaying = useAppStore((s) => s.setPlaying);
 
   const genres = useAppStore((s) => s.genres);
   const section = sectionOf(view);
@@ -124,21 +120,6 @@ export default function App() {
     return takeaway(view, ranged, buildMonths(aggregates), genres).lead;
   }, [view, range, aggregates, genres]);
   const months = React.useMemo(() => buildMonths(aggregates), [aggregates]);
-
-  // Playback: advance the selected month on a timer.
-  React.useEffect(() => {
-    if (!playing || months.length === 0) return;
-    const t = setInterval(() => {
-      const idx = months.findIndex((m) => m.key === (month ?? months[months.length - 1].key));
-      const cur = idx < 0 ? months.length - 1 : idx;
-      if (cur >= months.length - 1) {
-        setPlaying(false);
-      } else {
-        setMonth(months[cur + 1].key);
-      }
-    }, 900);
-    return () => clearInterval(t);
-  }, [playing, months, month, setMonth, setPlaying]);
 
   return (
     <div className="tj">

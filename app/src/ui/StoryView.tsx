@@ -252,13 +252,18 @@ export function StoryView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
   // silently follow a range picked on another page.
   const rangedEvents = events;
 
-  const clock = hourHistogram(rangedEvents);
-  const week = weekdayHistogram(rangedEvents);
+  const { clock, week, skips, sess, mix } = React.useMemo(
+    () => ({
+      clock: hourHistogram(rangedEvents),
+      week: weekdayHistogram(rangedEvents),
+      skips: skipStats(rangedEvents),
+      sess: sessions(rangedEvents),
+      mix: mixStats(rangedEvents),
+    }),
+    [rangedEvents],
+  );
   const peakHour = clock.indexOf(Math.max(...clock));
-  const skips = skipStats(rangedEvents);
-  const disc = discoveries(aggs);
-  const sess = sessions(rangedEvents);
-  const mix = mixStats(rangedEvents);
+  const disc = React.useMemo(() => discoveries(aggs), [aggs]);
 
   return (
     <>

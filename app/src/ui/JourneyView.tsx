@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   artistEras,
   filterToMonths,
@@ -17,16 +18,19 @@ export function JourneyView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
   const setMonth = useAppStore((s) => s.setMonth);
   const setPlaying = useAppStore((s) => s.setPlaying);
 
-  const rangeKeys = rangeMonthKeys(months, range);
-  const ranged = filterToMonths(aggs, rangeKeys);
-  const total = ranged.reduce((s, a) => s + a.ms, 0) / 60000;
+  const rangeKeys = React.useMemo(() => rangeMonthKeys(months, range), [months, range]);
+  const total = React.useMemo(
+    () => filterToMonths(aggs, rangeKeys).reduce((s, a) => s + a.ms, 0) / 60000,
+    [aggs, rangeKeys],
+  );
   const maxMin = Math.max(1, ...months.map((m) => m.minutes));
   const curKey = month ?? months[months.length - 1]?.key;
   const cur = months.find((m) => m.key === curKey) ?? months[months.length - 1];
   const curAggs = cur ? aggs.filter((a) => a.month === cur.key) : [];
   const curTop = topArtists(curAggs, 3);
-  const eras = artistEras(months, aggs);
-  const rangeLabel = { '4w': '4 weeks', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
+  const eras = React.useMemo(() => artistEras(months, aggs), [months, aggs]);
+  const rangeLabel =
+    { '4w': 'Last month', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
 
   return (
     <>

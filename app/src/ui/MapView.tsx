@@ -53,8 +53,8 @@ export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAgg
   const minHitUnits = 22 / Math.max(0.2, pxPerUnit);
   const labelUnits = Math.min(30, Math.max(17, 10.5 / Math.max(0.2, pxPerUnit)));
 
-  const rangeKeys = rangeMonthKeys(months, range);
-  const rangedMonths = months.filter((m) => rangeKeys.has(m.key));
+  const rangeKeys = React.useMemo(() => rangeMonthKeys(months, range), [months, range]);
+  const rangedMonths = React.useMemo(() => months.filter((m) => rangeKeys.has(m.key)), [months, rangeKeys]);
   const rangedAggs = React.useMemo(() => filterToMonths(aggs, rangeKeys), [aggs, rangeKeys]);
 
   const world = worldShapes();
@@ -116,6 +116,24 @@ export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAgg
 
   const maxMin = pins[0]?.minutes ?? 1;
   const sel = pins.find((p) => p.shape.id === selected) ?? null;
+  // Most played track per artist of the selected country.
+  const selTopTrack = React.useMemo(() => {
+    const out = new Map<string, string>();
+    if (!sel) return out;
+    const names = new Set(sel.artists.map((a) => a.name));
+    const byArtist = new Map<string, PlayAggregate[]>();
+    for (const x of rangedAggs) {
+      if (!names.has(x.artist)) continue;
+      const list = byArtist.get(x.artist);
+      if (list) list.push(x);
+      else byArtist.set(x.artist, [x]);
+    }
+    for (const [name, list] of byArtist) {
+      const t = topTracks(list, 1)[0];
+      if (t) out.set(name, t.name);
+    }
+    return out;
+  }, [sel, rangedAggs]);
   const hasCollection = Object.keys(origins).length > 0;
   const gated = source === 'export' && matchState === 'idle' && !hasCollection;
 
@@ -287,13 +305,7 @@ export function MapView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAgg
                       <span className="tj-rank">{i + 1}</span>
                       <span className="tj-mini-name">
                         {a.name}
-                        <em>
-                          most played:{' '}
-                          {topTracks(
-                            rangedAggs.filter((x) => x.artist === a.name),
-                            1,
-                          )[0]?.name ?? 'n/a'}
-                        </em>
+                        <em>most played: {selTopTrack.get(a.name) ?? 'n/a'}</em>
                       </span>
                       <span className="tj-mini-val">{fmtMinutes(a.minutes)}</span>
                     </li>

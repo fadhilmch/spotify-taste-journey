@@ -12,46 +12,48 @@ Two data sources, always clearly labeled:
 
 ## What it shows
 
-- **The story** - the first view: one scroll through your history. A sticky chart morphs from chapter
-  to chapter (who led each stretch, who came back, the quiet years) while the text scrolls past.
+- **Story** - the first view: one scroll through your history. A sticky chart morphs from chapter
+  to chapter (who led each stretch, who came back, the quiet years) while the text scrolls past;
+  chapters include a river of your top artists over time and a country map of where they come from.
   Every number is counted from your plays; partial first/last years are compared per month and
   marked `*`. "Play story" scrolls through the chapters; motion is skipped when the system asks for
-  reduced motion.
-- **Journey** - minutes listened per month, selectable time ranges (4 weeks / 6 months /
-  1 year / all time), top artists per selected month, and "artist eras" (who defined each
-  stretch of your history).
-- **Spectrum** - your genre mix as a stream over time (share of each month's minutes),
-  plus a browsable breakdown: open a group to see its artists and most-played tracks.
-  Groups are broad buckets derived from MusicBrainz community tags, matched per artist
-  name only - they are metadata, not measured sound, and not a physical axis. Artists
-  with no confident metadata match stay visibly **Uncategorized** - never guessed.
-- **Story** - your history as chapters: stretches where one artist led your listening,
-  plus discoveries, sessions, skip stats and listening-hour patterns. "Play the story"
-  is a timeline animation that scrubs the chapters - no audio is played. Everything on
-  the view follows the time filter except discoveries: first-ever listens are counted
-  across your full history, whatever range is picked (the view says so where they
-  appear). Labels come only from your minutes - nothing is invented. A "narrator" panel
-  outlines a possible written-story feature; it is not implemented and no text is
-  generated for you.
-- **World** - where your artists come from, on a real world map rendered fully offline
-  from the bundled Natural Earth 110m dataset (public domain; no map tiles, no geocoding
-  service). One pin per origin COUNTRY, placed at the country's center: it marks where
-  artists are from, never where you listened. Pin size is your minutes in the current
-  range; the dashed route links your chapters in time order. Origins (ISO country from
-  MusicBrainz) come either from the same one-time opt-in as genre tags, or from a collection
-  file you made yourself with the collection script and load on the page (read on this
-  device only, country only, strict name match; see `docs/musicbrainz-collection.md`);
-  artists with no origin on
-  record are listed explicitly instead of being guessed. Demo mode uses built-in demo
-  tags and stays offline.
-- **Artists / Tracks** - ranked lists with first-appearance dates from your own history.
+  reduced motion. The country map needs artist countries: from the MusicBrainz lookup, a collection
+  file, or the demo.
+- **Explore** - five views:
+  - **Rediscover** - artists you used to play and have left behind.
+  - **Month by month** - minutes listened per month, selectable time ranges (last month / 6 months /
+    1 year / all time; ranges are whole calendar months), top artists per selected month, and "artist eras" (who defined each
+    stretch of your history).
+  - **Habits** - skip stats, listening-hour patterns, sessions and discoveries. Everything on
+    the view follows the time filter except discoveries: first-ever listens are counted
+    across your full history, whatever range is picked (the view says so where they
+    appear). Labels come only from your minutes - nothing is invented. A "Narration - not
+    enabled yet" panel outlines a possible written-story feature; it is not implemented and no
+    text is generated for you.
+  - **World** - where your artists come from, on a real world map rendered fully offline
+    from the bundled Natural Earth 110m dataset (public domain; no map tiles, no geocoding
+    service). One pin per origin COUNTRY, placed at the country's center: it marks where
+    artists are from, never where you listened. Pin size is your minutes in the current
+    range; the dashed route links your chapters in time order. Origins (ISO country from
+    MusicBrainz) come either from the same one-time opt-in as genre tags, or from a collection
+    file you made yourself with the collection script and load on the page (read on this
+    device only, country only, strict name match; see `docs/musicbrainz-collection.md`);
+    artists with no origin on record are listed explicitly instead of being guessed. Demo mode
+    uses built-in demo tags and stays offline.
+  - **Spectrum** - your genre mix as a stream over time (share of each month's minutes),
+    plus a browsable breakdown: open a group to see its artists and most-played tracks.
+    Groups are broad buckets derived from MusicBrainz community tags, matched per artist
+    name only - they are metadata, not measured sound, and not a physical axis. Artists
+    with no confident metadata match stay visibly **Uncategorized** - never guessed.
+- **Library** - **Artists** and **Tracks**: ranked lists with first-appearance dates from your
+  own history.
 - **Share** - a shareable PNG card drawn on your device. You pick which fields it shows;
   your raw history never appears on it and nothing is posted for you.
 
 ## Stack and why
 
 - **Vite + React 18 + TypeScript** - fast dev loop, typed data model end to end, self-contained
-  production bundle (~140 kB gzip JS, including the offline world-map dataset). The app is a static site: no backend, no build-time
+  production bundle (~161 kB gzip JS, 443 kB raw, including the offline world-map dataset). The app is a static site: no backend, no build-time
   secrets.
 - **zustand** - one small store for source/filter state; no boilerplate.
 - **Web Worker** (`src/workers/parseWorker.ts`) - parsing multi-year exports can be tens of
@@ -59,12 +61,14 @@ Two data sources, always clearly labeled:
   loading/error/empty states.
 - **Tailwind CSS v4** (`@tailwindcss/vite`) - utility styling for the shared UI
   primitives; design tokens live in one `@theme` block (see Styling conventions below).
-- **@fontsource/nunito** - self-hosted Nunito (rounded, matches the design language); no
-  Google Fonts request, so fonts work offline and leak nothing.
+- **Plus Jakarta Sans Variable** - embedded as a base64 data URL in `src/fonts.css` (OFL
+  license); `@fontsource` is not a dependency. No Google Fonts request, so fonts work offline
+  and leak nothing.
 - **Vitest + Testing Library** - unit tests for parsing, stats, genre grouping and the genre
   service, plus component smoke tests for the app shell.
-- Charts are hand-drawn DOM/SVG-free bars (flex divs) - dependency-free, responsive, and
-  enough for this data shape.
+- Charts are a mix of flex-div bars and hand-built SVG: `d3-shape` for the stream areas,
+  `d3-geo` + `topojson-client` (with `world-atlas`) for the map, and a custom SVG river. These
+  are devDependencies, bundled at build time.
 
 ## Genre metadata: MusicBrainz (opt-in)
 

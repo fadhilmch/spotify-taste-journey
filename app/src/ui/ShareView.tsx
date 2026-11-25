@@ -16,14 +16,18 @@ export function ShareView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [canvasError, setCanvasError] = React.useState<string | null>(null);
 
-  const rangeLabel = { '4w': '4 weeks', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
-  const ranged = filterToMonths(aggs, rangeMonthKeys(months, range));
+  const rangeLabel =
+    { '4w': 'Last month', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
+  const ranged = React.useMemo(
+    () => filterToMonths(aggs, rangeMonthKeys(months, range)),
+    [aggs, months, range],
+  );
   const total = Math.round(ranged.reduce((s, a) => s + a.ms, 0) / 60000);
-  const topArtist = topArtists(ranged, 1)[0] ?? null;
-  const topTrack = topTracks(ranged, 1)[0] ?? null;
-  const mix = genreMix(ranged, genres);
+  const topArtist = React.useMemo(() => topArtists(ranged, 1)[0] ?? null, [ranged]);
+  const topTrack = React.useMemo(() => topTracks(ranged, 1)[0] ?? null, [ranged]);
+  const mix = React.useMemo(() => genreMix(ranged, genres), [ranged, genres]);
   const topGenre = mix.slices[0]?.group ?? null;
-  const eraCount = artistEras(months, aggs).length;
+  const eraCount = React.useMemo(() => artistEras(months, aggs).length, [months, aggs]);
   const hasMbGenres = Object.values(genres).some((g) => g.source === 'musicbrainz');
 
   const focusFacts = shareFocus ? artistFacts(aggs, shareFocus) : null;
@@ -51,8 +55,10 @@ export function ShareView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
     if (!canvas) return;
     try {
       renderShareCard(canvas, data, { ...cardBits, genre: false });
-      setCanvasError(null);
     } catch (err) {
+      // The canvas is an external system: its failure is only known after drawing. Once set, the
+      // canvas is no longer rendered, so this runs at most once and never needs resetting.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCanvasError(err instanceof Error ? err.message : String(err));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

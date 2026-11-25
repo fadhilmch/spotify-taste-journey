@@ -1,3 +1,4 @@
+import React from 'react';
 import type { RiverData } from '../data/habits';
 import { LABEL_SIZE, placeLabels, type LabelWish } from './riverLabels';
 
@@ -6,7 +7,8 @@ const H = 440;
 const T = 14;
 const B = 10;
 const HALF = 150;
-const HUES = [152, 140, 128, 118, 108, 146, 134, 122, 112, 156];
+// Spread around the wheel so neighbouring bands are easy to tell apart; saturation stays modest on the dark panel.
+const HUES = [152, 205, 275, 335, 22, 48, 180, 235, 0, 90];
 
 /** Smooth path along vertical points using midpoint quadratic curves. */
 function curve(pts: Array<[number, number]>, move = true): string {
@@ -26,6 +28,7 @@ function curve(pts: Array<[number, number]>, move = true): string {
  * tell the bands apart.
  */
 export function River({ data }: { data: RiverData }) {
+  const clip = `tj-river-clip-${React.useId().replace(/:/g, '')}`;
   const n = data.months.length;
   const cx = W / 2 + 12;
   const y = (i: number) => T + (i / (n - 1)) * (H - T - B);
@@ -67,11 +70,11 @@ export function River({ data }: { data: RiverData }) {
         .join(', ')} are the bands.`}
     >
       <defs>
-        <clipPath id="tj-river-clip">
+        <clipPath id={clip}>
           <rect x="0" y="0" width={W} height={H} className="tj-river-reveal" />
         </clipPath>
       </defs>
-      <g clipPath="url(#tj-river-clip)">
+      <g clipPath={`url(#${clip})`}>
         {data.bands.map((b, j) => {
           const left = b.minutes.map((_, i): [number, number] => [px(lo[j][i]), y(i)]);
           const right = b.minutes.map((_, i): [number, number] => [px(stack[j][i]), y(i)]).reverse();
@@ -79,7 +82,7 @@ export function River({ data }: { data: RiverData }) {
             <path
               key={b.artist}
               d={`${curve(left)}${curve(right, false)}Z`}
-              fill={`hsl(${HUES[j % HUES.length]} 62% ${38 + (j % 3) * 8}%)`}
+              fill={`hsl(${HUES[j % HUES.length]} 52% ${42 + (j % 3) * 7}%)`}
               opacity={0.92}
             />
           );
@@ -97,7 +100,7 @@ export function River({ data }: { data: RiverData }) {
           y={l.y + 4}
           textAnchor="middle"
           className="tj-river-name"
-          style={{ animationDelay: `${1.2 + (i / Math.max(1, labels.length)) * 2}s` }}
+          style={{ animationDelay: `${1.2 + (i / Math.max(1, labels.length)) * 0.8}s` }}
         >
           {l.text}
         </text>

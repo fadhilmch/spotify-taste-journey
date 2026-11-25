@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { parseStreamingHistoryMulti } from '../data/parseExport';
-import { classifyFile, type FileReport, type PickedFile } from '../data/importFiles';
+import { classifyFileParsed, type FileReport, type PickedFile } from '../data/importFiles';
 
 /**
  * Parses export files off the main thread so large histories do not freeze
@@ -16,10 +16,10 @@ self.onmessage = (e: MessageEvent<PickedFile[]>) => {
     const reports: FileReport[] = [];
     const historyParts: { json: unknown; report: FileReport }[] = [];
     e.data.forEach((file, i) => {
-      const report = classifyFile(file);
+      const { report, json } = classifyFileParsed(file);
       reports.push(report);
       if (report.status === 'loaded') {
-        historyParts.push({ json: JSON.parse(file.text) as unknown, report });
+        historyParts.push({ json, report });
       }
       postMessage({ progress: { done: i + 1, total: e.data.length } });
     });

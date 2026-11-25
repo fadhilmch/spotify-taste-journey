@@ -93,11 +93,14 @@ export function topTracks(aggs: PlayAggregate[], n: number): TrackTotal[] {
 export function artistEras(months: MonthBucket[], aggs: PlayAggregate[]): Era[] {
   const eras: Era[] = [];
   let cur: Era | null = null;
+  const byMonth = new Map<string, PlayAggregate[]>();
+  for (const a of aggs) {
+    const list = byMonth.get(a.month);
+    if (list) list.push(a);
+    else byMonth.set(a.month, [a]);
+  }
   for (const mo of months) {
-    const top = topArtists(
-      aggs.filter((a) => a.month === mo.key),
-      1,
-    )[0];
+    const top = topArtists(byMonth.get(mo.key) ?? [], 1)[0];
     if (!top) continue;
     if (cur && cur.artist === top.name) {
       cur.to = mo.key;
@@ -159,7 +162,6 @@ export function rangeMonthKeys(months: MonthBucket[], range: string): Set<string
 
 export function fmtMinutes(min: number): string {
   if (min >= 60000) return `${(min / 60000).toFixed(1)}k hr`;
-  if (min >= 10000) return `${(min / 1000).toFixed(1)}k min`;
   if (min >= 1000) return `${(min / 1000).toFixed(1)}k min`;
   return `${Math.round(min)} min`;
 }
@@ -393,15 +395,22 @@ export function mixStats(events: PlayEvent[]): MixStats {
  */
 export function chapters(months: MonthBucket[], aggs: PlayAggregate[]): Chapter[] {
   const eras = artistEras(months, aggs);
-  const monthMin = new Map(months.map((m) => [m.key, m.minutes]));
+  // Prefix sums over months (sorted, contiguous) replace a per-era months filter.
+  const prefix = [0];
+  for (const m of months) prefix.push(prefix[prefix.length - 1] + m.minutes);
+  const monthIdx = new Map(months.map((m, i) => [m.key, i]));
+  const byArtist = new Map<string, PlayAggregate[]>();
+  for (const a of aggs) {
+    const list = byArtist.get(a.artist);
+    if (list) list.push(a);
+    else byArtist.set(a.artist, [a]);
+  }
   const seen = new Set<string>();
   const lastKey = months[months.length - 1]?.key;
   return eras.map((e, i) => {
-    const windowMin = months
-      .filter((m) => m.key >= e.from && m.key <= e.to)
-      .reduce((s, m) => s + (monthMin.get(m.key) ?? 0), 0);
+    const windowMin = prefix[monthIdx.get(e.to)! + 1] - prefix[monthIdx.get(e.from)!];
     const share = windowMin > 0 ? e.minutes / windowMin : 0;
-    const windowAggs = aggs.filter((a) => a.artist === e.artist && a.month >= e.from && a.month <= e.to);
+    const windowAggs = (byArtist.get(e.artist) ?? []).filter((a) => a.month >= e.from && a.month <= e.to);
     const topTrack = topTracks(windowAggs, 1)[0]?.name ?? null;
     let kind: ChapterKind;
     if (i === 0) kind = 'first';
