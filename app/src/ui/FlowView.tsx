@@ -8,8 +8,9 @@ import {
   SHARE_BEAT,
   type HabitBeat,
 } from '../data/habits';
+import { normalizeArtistName } from '../data/genreService';
 import { buildNarrative, type Narrative } from '../data/narrative';
-import type { PlayAggregate, PlayEvent } from '../data/types';
+import type { ArtistOrigin, PlayAggregate, PlayEvent } from '../data/types';
 import { useAppStore } from '../state/store';
 import { River } from './River';
 import { Button } from './primitives';
@@ -292,10 +293,24 @@ function MonthStrip({
 export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: PlayEvent[] }) {
   const story = React.useMemo(() => buildNarrative(aggs), [aggs]);
   const artistChapter = useAppStore((st) => st.artistChapter);
-  const origins = useAppStore((st) => st.origins);
+  const collectionOrigins = useAppStore((st) => st.origins);
+  const genres = useAppStore((st) => st.genres);
+  // Countries from MusicBrainz lookups (or the demo) first, then the collection file on top.
+  const genresAreDemo = useAppStore((st) => st.genresAreDemo);
+  const origins = React.useMemo(() => {
+    const merged: Record<string, ArtistOrigin> = {};
+    for (const [artist, g] of Object.entries(genres)) {
+      if (g.origin?.country) {
+        merged[normalizeArtistName(artist)] = { country: g.origin.country, area: g.origin.area };
+      }
+    }
+    return { ...merged, ...collectionOrigins };
+  }, [genres, collectionOrigins]);
   const extras = React.useMemo(() => {
     const list: HabitBeat[] = [...buildHabitBeats(events, aggs)];
-    const cm = buildCountryMapBeat(aggs, origins);
+    // Name the source the countries came from: the collection file wins, since it overlays the rest.
+    const from = Object.keys(collectionOrigins).length > 0 ? 'file' : genresAreDemo ? 'demo' : 'lookup';
+    const cm = buildCountryMapBeat(aggs, origins, from);
     if (cm) list.push(cm);
     const ret = buildReturnedBeat(aggs);
     if (ret) list.push(ret);
@@ -303,19 +318,21 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
     if (art) list.push(art);
     list.push(ORIGINS_BEAT, SHARE_BEAT);
     return list;
-  }, [events, aggs, artistChapter, origins]);
+  }, [events, aggs, artistChapter, origins, collectionOrigins, genresAreDemo]);
   const nStory = story ? story.beats.length : 0;
   const total = nStory + extras.length;
   const [active, setActive] = React.useState(0);
   const storyFocus = useAppStore((st) => st.storyFocus);
   const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
   const setStoryFocus = useAppStore((st) => st.setStoryFocus);
-  const hasOrigins = useAppStore((st) => Object.keys(st.genres).length > 0);
-  const originsAreDemo = useAppStore((st) => st.genresAreDemo);
+  const hasOrigins = Object.keys(origins).length > 0;
+  const originsFromFile = Object.keys(collectionOrigins).length > 0;
+  const originsAreDemo = genresAreDemo;
   const setShareFocus = useAppStore((st) => st.setShareFocus);
   const setView = useAppStore((st) => st.setView);
   const [playing, setPlaying] = React.useState(false);
   const sections = React.useRef<Array<HTMLElement | null>>([]);
+  const rail = React.useRef<HTMLDivElement>(null);
   const jump = React.useRef<{ i: number; until: number } | null>(null);
 
   React.useEffect(() => {
@@ -333,13 +350,13 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
         }
       }
       obs?.disconnect();
-      // Stacked layout (phones): the active band sits just under the sticky stage.
+      // Stacked layout (phones): the active band sits just under the sticky stage, past the 16px gap goTo leaves, so a chapter jumped to is the only one in it.
       const below = stageBottom();
       const vh = window.innerHeight;
       const margin =
         below === null
           ? '-35% 0px -55% 0px'
-          : `-${Math.round(below + 8)}px 0px -${Math.max(0, Math.round(vh - below - 72))}px 0px`;
+          : `-${Math.round(below + 24)}px 0px -${Math.max(0, Math.round(vh - below - 72))}px 0px`;
       obs = new IntersectionObserver(
         (entries) => {
           for (const e of entries) {
@@ -364,6 +381,15 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
       obs?.disconnect();
     };
   }, [story, extras]);
+
+  // The pips are one scrolling row: keep the active pip centred in it. Scrolls only the row, never the page.
+  React.useEffect(() => {
+    const row = rail.current;
+    const pip = row?.querySelector<HTMLElement>('.tj-flow-pip.on');
+    if (!row || !pip) return;
+    const left = pip.offsetLeft - (row.clientWidth - pip.offsetWidth) / 2;
+    row.scrollTo?.({ left, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }, [active]);
 
   const goTo = React.useCallback((i: number, instant = false) => {
     const el = sections.current[i];
@@ -471,22 +497,7 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
               </div>
             )}
           </div>
-          <div className="tj-flow-rail" role="group" aria-label="Chapters">
-            {chapters.map((b, i) => (
-              <button
-                key={b.id}
-                type="button"
-                className={i === active ? 'tj-flow-pip on' : 'tj-flow-pip'}
-                aria-current={i === active ? 'step' : undefined}
-                onClick={() => {
-                  setPlaying(false);
-                  goTo(i);
-                }}
-              >
-                <span className="tj-flow-pipdot" />
-                {b.label}
-              </button>
-            ))}
+          <div className="tj-flow-rail">
             <Button
               variant="ghost"
               className="tj-flow-play"
@@ -497,6 +508,23 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
             >
               {playing ? 'Pause story' : 'Play story'}
             </Button>
+            <div className="tj-flow-pips" ref={rail} role="group" aria-label="Chapters">
+              {chapters.map((b, i) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  className={i === active ? 'tj-flow-pip on' : 'tj-flow-pip'}
+                  aria-current={i === active ? 'step' : undefined}
+                  onClick={() => {
+                    setPlaying(false);
+                    goTo(i);
+                  }}
+                >
+                  <span className="tj-flow-pipdot" />
+                  {b.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <ol className="tj-flow-chapters">
@@ -544,7 +572,9 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
                     <p>
                       {originsAreDemo
                         ? 'This demo already has sample origins loaded. Nothing is sent anywhere.'
-                        : 'Artist origins are already on this device from a lookup you ran. Nothing new is sent unless you start the lookup again on the World page.'}{' '}
+                        : originsFromFile
+                          ? 'Artist countries are on this device from the collection file you added. Nothing is sent anywhere.'
+                          : 'Artist origins are already on this device from a lookup you ran. Nothing new is sent unless you start the lookup again on the World page.'}{' '}
                       The results are on the World and Spectrum pages.
                     </p>
                     <div className="tj-flow-links">

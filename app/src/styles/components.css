@@ -336,6 +336,9 @@
     display: block;
     width: 100%;
     max-width: 360px;
+    /* Scales down inside the capped stage instead of overflowing it. */
+    flex: 1 1 0;
+    min-height: 0;
     margin: 10px auto 0;
     border-radius: 14px;
     background: var(--panel-2);
@@ -343,7 +346,7 @@
   .tj-river-reveal {
     transform-box: fill-box;
     transform-origin: top;
-    animation: tj-river-flow 3.2s cubic-bezier(0.45, 0.05, 0.3, 1) both;
+    animation: tj-river-flow 1.2s cubic-bezier(0.45, 0.05, 0.3, 1) both;
   }
   .tj-river-name {
     font-size: 11px;
@@ -1087,6 +1090,12 @@
     color: var(--txt-2);
     white-space: nowrap;
   }
+  /* Over 100 columns on a phone: 3px gaps alone are wider than the row, which pushed the last tick past the edge. */
+  @media (max-width: 640px) {
+    .tj-disc-bars {
+      gap: 1px;
+    }
+  }
   .tj-disc-detail {
     border-top: 1px solid rgba(255, 255, 255, 0.07);
     margin-top: 10px;
@@ -1468,6 +1477,7 @@
   }
   .tj-flow-stage {
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
   }
@@ -1558,17 +1568,34 @@
     border-radius: 50%;
     margin-right: 6px;
   }
+  /* One row: Play first, then the chapter pips scrolling sideways, so the rail never eats the stage height. */
   .tj-flow-rail {
     display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
+    gap: 8px;
     align-items: center;
+    flex-shrink: 0;
     margin-top: auto;
     padding-top: 8px;
     border-top: 1px solid var(--line);
   }
+  .tj-flow-pips {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+    align-items: center;
+    overflow-x: auto;
+    scrollbar-width: none;
+    mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+  }
+  .tj-flow-pips::-webkit-scrollbar {
+    display: none;
+  }
   .tj-flow-pip {
     all: unset;
+    flex-shrink: 0;
+    white-space: nowrap;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -1603,7 +1630,13 @@
     transform: scale(1.5);
   }
   .tj-flow-play {
-    margin-left: auto;
+    flex-shrink: 0;
+  }
+  /* The river is the tallest chart: give it the strip's and the kicker's room. */
+  .tj-flow-left:has(.tj-river-svg) .tj-strip,
+  .tj-flow-left:has(.tj-river-svg) .tj-strip-note,
+  .tj-flow-stage:has(.tj-river-svg) .tj-flow-kicker {
+    display: none;
   }
   .tj-flow-chapters {
     list-style: none;
@@ -1666,9 +1699,14 @@
   .tj-flow-stage > .tj-flow-legend {
     animation: tj-fade-in 0.5s ease-out both;
   }
+  /* The river needs the height: drop its long legend (the chapter text says the same). */
+  .tj-flow-stage:has(.tj-river-svg) .tj-flow-legend {
+    display: none;
+  }
   .tj-flow-stagewrap {
     position: relative;
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
   }
@@ -1751,7 +1789,10 @@
       top: 0;
       z-index: 2;
       padding: 10px 12px 6px;
-      min-height: min(360px, 42vh);
+      /* Fixed, so the stage never changes height between chapters (which would move the chapter positions). */
+      height: min(360px, 42vh);
+      min-height: 0;
+      max-height: none;
       border-radius: 0 0 16px 16px;
     }
     .tj-flow-big {
@@ -1765,15 +1806,12 @@
       max-height: 21vh;
       min-height: 100px;
     }
-    .tj-flow-pip {
+    .tj-flow-left .tj-strip-note {
       display: none;
     }
     .tj-flow-rail {
       margin-top: 4px;
       padding-top: 4px;
-    }
-    .tj-flow-play {
-      margin-left: 0;
     }
     .tj-flow-ax {
       font-size: 17px;
@@ -1781,6 +1819,7 @@
     .tj-flow-chapter {
       min-height: 36vh;
       justify-content: flex-start;
+      padding: 28px 4px 16px;
     }
     /* Headings slide out under a soft edge instead of touching the stage. */
     .tj-flow-left::after {
@@ -1800,7 +1839,7 @@
   /* Short phones: give the chapter text more of the screen. */
   @media (max-width: 860px) and (max-height: 720px) {
     .tj-flow-left {
-      min-height: min(300px, 40vh);
+      height: min(300px, 40vh);
       padding-top: 6px;
     }
     .tj-flow-stage .tj-habit-bars {
