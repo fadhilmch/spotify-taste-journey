@@ -28,7 +28,8 @@ describe('buildCountryMapBeat', () => {
   });
   it('says the caption is a name match and names a partial last year', () => {
     const b = buildCountryMapBeat([agg('Alpha', 50), agg('Beta', 30, '2026-10')], origins)!;
-    expect(b.caption).toMatch(/not a verified identity/);
+    // The "not a verified identity" caveat lives on the method page (method.test.tsx).
+    expect(b.caption).toMatch(/matched by artist name/);
     expect(b.caption).toMatch(/2026\) is partial/);
   });
   it('is absent without origins or with fewer than two countries', () => {
