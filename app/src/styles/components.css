@@ -1453,6 +1453,27 @@
       transition-duration: 0.01ms !important;
     }
   }
+  /* Top countries and the map legend sit in the stage on wide screens and in the chapter text on phones. */
+  .tj-flow-mapfacts {
+    display: none;
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--txt-2);
+  }
+  .tj-flow-mapfacts ul {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+  }
+  .tj-flow-mapfacts b {
+    color: var(--txt);
+    font-variant-numeric: tabular-nums;
+  }
+  .tj-flow-mapfacts p {
+    margin: 0;
+  }
   /* Story flow: a sticky stage that morphs while chapters scroll past. */
   .tj-flow {
     display: grid;
@@ -1926,6 +1947,9 @@
     .tj-flow-stage:has(.tj-cmap) .tj-flow-legend,
     .tj-flow-stage .tj-cmap-top {
       display: none;
+    }
+    .tj-flow-mapfacts {
+      display: block;
     }
     .tj-flow-stage .tj-cmap-key {
       margin-top: 6px;

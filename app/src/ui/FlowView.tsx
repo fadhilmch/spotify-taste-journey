@@ -145,7 +145,7 @@ function HabitStage({
 
 const LEGENDS: Record<string, string> = {
   'habit-river': 'Each band is an artist. Width is minutes per month.',
-  'habit-countrymap': 'Darker countries hold more of your minutes. Grey ones hold none.',
+  'habit-countrymap': 'Brighter green countries hold more of your minutes. Grey ones hold none.',
 };
 
 function Stage({
@@ -658,6 +658,18 @@ export function FlowView({ aggs, events }: { aggs: PlayAggregate[]; events: Play
                     </div>
                   ) : x?.kind === 'origins' ? null : (
                     <p>{b.caption}</p>
+                  )}
+                  {'map' in b && b.map && (
+                    <div className="tj-flow-mapfacts">
+                      <ul aria-label="Top countries by minutes">
+                        {b.map.countries.slice(0, 5).map((c) => (
+                          <li key={c.id}>
+                            <b>{c.share}%</b> {c.name}
+                          </li>
+                        ))}
+                      </ul>
+                      <p>{LEGENDS[b.id]}</p>
+                    </div>
                   )}
                   {x?.kind === 'returned' && (
                     <div className="tj-flow-links">
