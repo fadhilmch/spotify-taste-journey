@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { zipSync, strToU8 } from 'fflate';
-import { classifyFile, extractZipJson, isZipName } from '../data/importFiles';
+import { classifyFile, classifyFileParsed, extractZipJson, isZipName } from '../data/importFiles';
 import { parseStreamingHistoryMulti } from '../data/parseExport';
 import { coverageLabel, looksLikePartialHistory, monthsBetween } from '../data/coverage';
 
@@ -10,6 +10,16 @@ function extPlay(ts: string, artist = 'Artist', track = 'Song', ms = 120000) {
 function legPlay(endTime: string, artist = 'Artist', track = 'Song', ms = 120000) {
   return { endTime, msPlayed: ms, trackName: track, artistName: artist };
 }
+
+describe('classifyFileParsed', () => {
+  it('returns the parsed JSON for history files only', () => {
+    const rows = [legPlay('2024-01-01 10:00')];
+    const hit = classifyFileParsed({ name: 'a.json', text: JSON.stringify(rows) });
+    expect(hit.report.status).toBe('loaded');
+    expect(hit.json).toEqual(rows);
+    expect(classifyFileParsed({ name: 'b.json', text: '{}' }).json).toBeUndefined();
+  });
+});
 
 describe('classifyFile', () => {
   it('recognizes an extended history file by its rows', () => {

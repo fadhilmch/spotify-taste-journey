@@ -1,5 +1,21 @@
+import { useMemo } from 'react';
 import { useAppStore } from '../state/store';
+import { uniqueArtists } from '../data/stats';
 import { Button, Card } from './primitives';
+
+/** Requests are paced at 1.1 s each (RATE_MS in data/genreService.ts). */
+const SECONDS_PER_ARTIST = 1.1;
+
+/** Rough first-run time for `artists` lookups, e.g. "roughly 1 hour". */
+export function estimateLookup(artists: number): string {
+  const minutes = (artists * SECONDS_PER_ARTIST) / 60;
+  if (minutes < 55) {
+    const m = Math.max(1, Math.round(minutes / 5) * 5 || 1);
+    return `roughly ${m} ${m === 1 ? 'minute' : 'minutes'}`;
+  }
+  const h = Math.round(minutes / 30) / 2;
+  return `roughly ${h} ${h === 1 ? 'hour' : 'hours'}`;
+}
 
 /**
  * The explicit MusicBrainz opt-in gate, shared by World and Spectrum.
@@ -11,6 +27,8 @@ export function OptInGate({ what, plural = false }: { what: string; plural?: boo
   const matchProgress = useAppStore((s) => s.matchProgress);
   const matchError = useAppStore((s) => s.matchError);
   const startMatching = useAppStore((s) => s.startMatching);
+  const aggregates = useAppStore((s) => s.aggregates);
+  const artistCount = useMemo(() => uniqueArtists(aggregates).length, [aggregates]);
 
   return (
     <>
@@ -26,6 +44,14 @@ export function OptInGate({ what, plural = false }: { what: string; plural?: boo
             musicbrainz.org, one request per artist at about one per second. Matches are cached on this
             device. Until then, everything below stays uncategorized rather than guessed.
           </p>
+          {artistCount > 0 && (
+            <p className="tj-note mt-2" data-testid="optin-estimate">
+              About {artistCount.toLocaleString('en-US')} artists, so a first run takes{' '}
+              {estimateLookup(artistCount)}; you can keep using the app meanwhile, and results already matched
+              stay cached. For a large library, the collection script in docs/musicbrainz-collection.md does
+              the same lookup outside the browser and you import its file on the World page.
+            </p>
+          )}
           <Button className="mt-2.5" onClick={() => void startMatching()}>
             Enable MusicBrainz lookup
           </Button>
