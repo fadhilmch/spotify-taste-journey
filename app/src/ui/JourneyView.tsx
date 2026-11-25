@@ -9,7 +9,7 @@ import {
 } from '../data/stats';
 import type { MonthBucket, PlayAggregate } from '../data/types';
 import { useAppStore } from '../state/store';
-import { artistBackground } from './theme';
+import { artistBackground, artistHue } from './theme';
 import { Section } from './primitives';
 
 export function JourneyView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAggregate[] }) {
@@ -29,6 +29,16 @@ export function JourneyView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
   const curAggs = cur ? aggs.filter((a) => a.month === cur.key) : [];
   const curTop = topArtists(curAggs, 3);
   const eras = React.useMemo(() => artistEras(months, aggs), [months, aggs]);
+  const spans = React.useMemo(() => {
+    const idx = new Map(months.map((m, i) => [m.key, i]));
+    return eras.map((e) => ({
+      ...e,
+      count: (idx.get(e.to) ?? 0) - (idx.get(e.from) ?? 0) + 1,
+      label: `${e.artist}, ${monthLabel(e.from).label} to ${monthLabel(e.to).label}`,
+    }));
+  }, [eras, months]);
+  const longEras = spans.filter((e) => e.count >= 2);
+  const oneMonth = spans.length - longEras.length;
   const rangeLabel =
     { '4w': 'Last month', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
 
@@ -88,27 +98,42 @@ export function JourneyView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
         </Section>
       )}
 
-      <Section id="tj-eras-h" title={'Artist eras'} aside={'Who defined each stretch'}>
-        <div className="tj-eras">
-          {eras.map((e) => (
+      <Section id="tj-eras-h" title={'Artist eras'} aside={'Who led each stretch'}>
+        <div className="tj-ribbon" role="group" aria-label="Artist eras across your history">
+          {spans.map((e) => (
             <button
               key={e.artist + e.from}
               type="button"
-              className="tj-era"
+              className={'tj-ribbon-seg' + (e.from <= curKey! && curKey! <= e.to ? ' is-on' : '')}
+              style={{ flexGrow: e.count, background: `hsl(${artistHue(e.artist)} 22% 34%)` }}
+              title={e.label}
+              aria-label={e.label}
+              aria-pressed={e.from <= curKey! && curKey! <= e.to}
               onClick={() => {
                 setMonth(e.to);
                 setPlaying(false);
               }}
-            >
-              <span className="tj-thumb tj-era-art" style={{ background: artistBackground(e.artist) }} />
-              <span className="tj-era-name">{e.artist}</span>
-              <span className="tj-era-when">
-                {monthLabel(e.from).label}
-                {e.to !== e.from ? ` - ${monthLabel(e.to).label}` : ''}
-              </span>
-            </button>
+            />
           ))}
         </div>
+        {longEras.length > 0 && (
+          <ol className="tj-era-list">
+            {longEras.map((e) => (
+              <li key={e.artist + e.from}>
+                <span className="tj-era-list-name">{e.artist}</span>
+                <span className="tj-era-list-when">
+                  {monthLabel(e.from).label} to {monthLabel(e.to).label}
+                </span>
+                <span className="tj-era-list-n">{e.count} months</span>
+              </li>
+            ))}
+          </ol>
+        )}
+        {oneMonth > 0 && (
+          <p className="tj-note">
+            Plus {oneMonth} one-month {oneMonth === 1 ? 'lead' : 'leads'}
+          </p>
+        )}
       </Section>
     </>
   );

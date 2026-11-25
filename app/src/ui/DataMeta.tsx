@@ -10,6 +10,7 @@ export function DataMeta() {
   const parseInfo = useAppStore((s) => s.parseInfo);
   const fileReports = useAppStore((s) => s.fileReports);
   const fileName = useAppStore((s) => s.fileName);
+  const setView = useAppStore((s) => s.setView);
   if (!parseInfo) return null;
 
   const summary = [
@@ -56,6 +57,11 @@ export function DataMeta() {
               : ''}
             . Parsed in this browser tab and never uploaded. Only listening fields (time, track, artist,
             milliseconds played) are read; anything else in the export is ignored.
+          </p>
+          <p>
+            <button type="button" className="tj-linkbtn" onClick={() => setView('method')}>
+              How this is counted
+            </button>
           </p>
           {notHistory.length > 0 && (
             <p>

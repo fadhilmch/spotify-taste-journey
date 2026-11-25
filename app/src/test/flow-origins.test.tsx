@@ -22,4 +22,18 @@ describe('FlowView origins chapter', () => {
     expect(screen.queryByText(/Locked until you add artist origins/i)).toBeNull();
     expect(screen.getByText(/from the collection file you added/i)).toBeInTheDocument();
   });
+
+  it('keeps the top countries and a correct colour legend in the chapter text', () => {
+    useAppStore.setState({
+      origins: {
+        'artist a': { country: 'GB', area: null },
+        'artist b': { country: 'SE', area: null },
+      },
+    });
+    render(<FlowView aggs={aggs} events={[]} />);
+    const list = screen.getByRole('list', { name: 'Top countries by minutes' });
+    expect(list.textContent).toMatch(/\d+(\.\d+)?%\s*United Kingdom/);
+    expect(screen.getByText(/Brighter green countries hold more of your minutes/)).toBeInTheDocument();
+    expect(screen.queryByText(/Darker countries/)).toBeNull();
+  });
 });

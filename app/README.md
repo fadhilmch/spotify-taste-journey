@@ -12,7 +12,8 @@ Two data sources, always clearly labeled:
 
 ## What it shows
 
-- **Story** - the first view: one scroll through your history. A sticky chart morphs from chapter
+- **Story** - the first view: one scroll through your history in three acts after a prologue:
+  I Who you were, II How you listen, III Where it comes from. A sticky chart morphs from chapter
   to chapter (who led each stretch, who came back, the quiet years) while the text scrolls past;
   chapters include a river of your top artists over time and a country map of where they come from.
   Every number is counted from your plays; partial first/last years are compared per month and
@@ -22,14 +23,12 @@ Two data sources, always clearly labeled:
 - **Explore** - five views:
   - **Rediscover** - artists you used to play and have left behind.
   - **Month by month** - minutes listened per month, selectable time ranges (last month / 6 months /
-    1 year / all time; ranges are whole calendar months), top artists per selected month, and "artist eras" (who defined each
-    stretch of your history).
+    1 year / all time; ranges are whole calendar months), top artists per selected month, and
+    "artist eras": a ribbon across your history plus a list of eras lasting 2+ months.
   - **Habits** - skip stats, listening-hour patterns, sessions and discoveries. Everything on
     the view follows the time filter except discoveries: first-ever listens are counted
     across your full history, whatever range is picked (the view says so where they
-    appear). Labels come only from your minutes - nothing is invented. A "Narration - not
-    enabled yet" panel outlines a possible written-story feature; it is not implemented and no
-    text is generated for you.
+    appear). Labels come only from your minutes - nothing is invented.
   - **World** - where your artists come from, on a real world map rendered fully offline
     from the bundled Natural Earth 110m dataset (public domain; no map tiles, no geocoding
     service). One pin per origin COUNTRY, placed at the country's center: it marks where
@@ -45,8 +44,12 @@ Two data sources, always clearly labeled:
     Groups are broad buckets derived from MusicBrainz community tags, matched per artist
     name only - they are metadata, not measured sound, and not a physical axis. Artists
     with no confident metadata match stay visibly **Uncategorized** - never guessed.
+- **Player bar** - the month picker at the bottom shows only on Month by month and Spectrum,
+  the two pages that read the selected month.
 - **Library** - **Artists** and **Tracks**: ranked lists with first-appearance dates from your
   own history.
+- **About** - **Get your export** (how to request and import your Spotify data) and
+  **How this is counted** (every rule in one place: time, chapters, habits, origins and genres).
 - **Share** - a shareable PNG card drawn on your device. You pick which fields it shows;
   your raw history never appears on it and nothing is posted for you.
 

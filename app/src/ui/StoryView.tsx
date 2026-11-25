@@ -390,17 +390,6 @@ export function StoryView({ months, aggs }: { months: MonthBucket[]; aggs: PlayA
           </ul>
         </Card>
       )}
-
-      <Card id="tj-narr-h" title="Narration - not enabled yet" className="border-dashed border-white/[0.14]!">
-        <p className="tj-note">
-          A narrator could turn these computed facts into written chapters and answers. Two routes are
-          possible: a small model that runs inside this browser (free and private, but needs a multi-GB
-          download and a recent device), or a hosted API (stronger writing, costs money, and sends only a
-          computed fact sheet - never your raw export - to a third party). Neither is wired up. Nothing is
-          downloaded, shared, or paid for from this app; choosing a route is a conversation, not a setting
-          here.
-        </p>
-      </Card>
     </>
   );
 }

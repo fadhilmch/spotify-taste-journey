@@ -1453,6 +1453,27 @@
       transition-duration: 0.01ms !important;
     }
   }
+  /* Top countries and the map legend sit in the stage on wide screens and in the chapter text on phones. */
+  .tj-flow-mapfacts {
+    display: none;
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--txt-2);
+  }
+  .tj-flow-mapfacts ul {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+  }
+  .tj-flow-mapfacts b {
+    color: var(--txt);
+    font-variant-numeric: tabular-nums;
+  }
+  .tj-flow-mapfacts p {
+    margin: 0;
+  }
   /* Story flow: a sticky stage that morphs while chapters scroll past. */
   .tj-flow {
     display: grid;
@@ -1463,10 +1484,9 @@
   .tj-flow-left {
     position: sticky;
     top: 16px;
-    /* Leave room for the fixed player bar so the stage is never covered. */
-    max-height: calc(100vh - 110px);
+    max-height: calc(100vh - 40px);
     /* One height for every chapter, so the stage does not jump as the content changes. */
-    min-height: min(600px, calc(100vh - 110px));
+    min-height: min(600px, calc(100vh - 40px));
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1474,6 +1494,11 @@
     border: 1px solid var(--line);
     border-radius: 16px;
     padding: 18px 18px 12px;
+  }
+  /* Leave room for the player bar on the pages that show it, so the stage is never covered. */
+  :root:has(.tj-player) .tj-flow-left {
+    max-height: calc(100vh - 110px);
+    min-height: min(600px, calc(100vh - 110px));
   }
   .tj-flow-stage {
     flex: 1;
@@ -1507,6 +1532,11 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--txt-2);
+  }
+  .tj-flow-count {
+    margin-left: 8px;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
   }
   .tj-flow-big {
     margin: 4px 0 6px;
@@ -1542,6 +1572,20 @@
   .tj-flow-ax {
     fill: var(--txt-2);
     font-size: 12px;
+  }
+  .tj-flow-ax-note {
+    font-size: 10px;
+    opacity: 0.8;
+  }
+  .tj-linkbtn {
+    all: unset;
+    cursor: pointer;
+    color: var(--green-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .tj-linkbtn:focus-visible {
+    outline: 2px solid var(--green-soft);
   }
   .tj-flow-line {
     fill: none;
@@ -1608,6 +1652,17 @@
     transition:
       background 0.3s ease,
       color 0.3s ease;
+  }
+  .tj-flow-pipact {
+    flex-shrink: 0;
+    margin: 0 2px 0 10px;
+    padding-left: 10px;
+    border-left: 1px solid var(--line);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--green-soft);
   }
   .tj-flow-pip:focus-visible {
     outline: 2px solid var(--green-soft);
@@ -1752,6 +1807,36 @@
     line-height: 1.6;
     color: var(--txt-2);
   }
+  /* Act heading: a wall title between chapters. Not a chapter, so the stage keeps the previous one. */
+  .tj-flow-act {
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 16px 4px;
+  }
+  .tj-flow-act-kicker {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--green-soft);
+  }
+  .tj-flow-act h2 {
+    margin: 0 0 14px;
+    font-size: clamp(40px, 6vw, 68px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .tj-flow-act-intro {
+    margin: 0;
+    max-width: 30ch;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--txt-2);
+  }
   .tj-flow-end {
     padding: 8px 0 40vh;
     max-width: 680px;
@@ -1816,6 +1901,11 @@
     .tj-flow-ax {
       font-size: 17px;
     }
+    .tj-flow-act {
+      min-height: 40vh;
+      justify-content: flex-start;
+      padding: 28px 4px 16px;
+    }
     .tj-flow-chapter {
       min-height: 36vh;
       justify-content: flex-start;
@@ -1834,6 +1924,36 @@
     }
     .tj-flow-end {
       padding-bottom: 0;
+    }
+    /* Country map: the fixed-height stage holds the map, three countries and the key, never more. */
+    .tj-flow-stage:has(.tj-cmap) {
+      min-height: 0;
+    }
+    .tj-flow-stage .tj-cmap {
+      flex: 1 1 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      margin-top: 2px;
+    }
+    .tj-flow-stage .tj-cmap-svg {
+      flex: 1 1 0;
+      min-height: 0;
+      width: 100%;
+    }
+    /* The shaded map is the picture here: the year strip, the legend line and the country list give way to it. */
+    .tj-flow-left:has(.tj-cmap) .tj-strip,
+    .tj-flow-left:has(.tj-cmap) .tj-strip-note,
+    .tj-flow-stage:has(.tj-cmap) .tj-flow-legend,
+    .tj-flow-stage .tj-cmap-top {
+      display: none;
+    }
+    .tj-flow-mapfacts {
+      display: block;
+    }
+    .tj-flow-stage .tj-cmap-key {
+      margin-top: 6px;
+      padding-top: 6px;
     }
   }
   /* Short phones: give the chapter text more of the screen. */

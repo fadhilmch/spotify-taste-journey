@@ -116,7 +116,17 @@ export interface ArtistGenre {
 }
 
 export type View =
-  'flow' | 'rediscover' | 'journey' | 'story' | 'map' | 'genres' | 'artists' | 'tracks' | 'share' | 'guide';
+  | 'flow'
+  | 'rediscover'
+  | 'journey'
+  | 'story'
+  | 'map'
+  | 'genres'
+  | 'artists'
+  | 'tracks'
+  | 'share'
+  | 'guide'
+  | 'method';
 
 export interface Coverage {
   matched: number;

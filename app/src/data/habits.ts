@@ -5,6 +5,7 @@ import {
   albumStats,
   hourHistogram,
   loopStats,
+  monthYearOf,
   sessions,
   skipFlagGapYears,
   skipStats,
@@ -102,10 +103,10 @@ export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = [])
     {
       id: 'habit-hours',
       label: 'Hours',
-      title: 'When you listen',
+      title: 'The hour you reach for music',
       big: hh(hp),
       unit: 'is your busiest hour',
-      caption: `${pct(hours[hp], hoursTotal)}% of your minutes fall in the hour from ${hh(hp)}. The quietest hour is ${hh(hq)}, with ${pct(hours[hq], hoursTotal)}%. Times use your browser's time zone.`,
+      caption: `${pct(hours[hp], hoursTotal)}% of your minutes fall in the hour from ${hh(hp)}. The quietest hour is ${hh(hq)}, with ${pct(hours[hq], hoursTotal)}%.`,
       values: hours,
       labels: hours.map((_, i) => (i % 6 === 0 ? String(i) : '')),
       peak: hp,
@@ -150,7 +151,7 @@ export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = [])
         title: 'When you press forward',
         big: `${pctOf(sk.rate)}%`,
         unit: 'of plays ended on the forward button',
-        caption: `A play counts when its recorded ending is the forward button; that includes moving on from a track you had already heard most of. ${arcText} Bars show each year, from 100 plays up.${gapNote}`,
+        caption: `A play counts when its recorded ending is the forward button; that includes moving on from a track you had already heard most of. ${arcText}${gapNote}`,
         values: rates,
         labels: byYear.map((y) => y.year.slice(2)),
         peak: argMax(rates),
@@ -173,7 +174,7 @@ export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = [])
         title: 'When you press forward',
         big: `${pctOf(sk.rate)}%`,
         unit: 'of plays ended on the forward button',
-        caption: `A play counts when its recorded ending is the forward button. Bars show that share per hour of day; hours with under 20 plays are left empty.${gapNote}`,
+        caption: `A play counts when its recorded ending is the forward button. Hours with under 20 plays are left empty.${gapNote}`,
         values: rates,
         labels: rates.map((_, i) => (i % 6 === 0 ? String(i) : '')),
         peak: rates.some((r) => r > 0) ? argMax(rates) : -1,
@@ -204,17 +205,40 @@ export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = [])
     const perYear = years.map((y) =>
       dis.byMonth.filter((m) => m.month.startsWith(y)).reduce((a, m) => a + m.count, 0),
     );
-    beats.push({
-      id: 'habit-new',
-      label: 'New names',
-      title: 'How often you find someone new',
-      big: dis.totalArtists.toLocaleString('en-US'),
-      unit: 'artists in total',
-      caption: `${dis.oneMonthWonders.toLocaleString('en-US')} were heard in a single month only, and ${dis.keepers.toLocaleString('en-US')} in three months or more. Bars show artists first heard in each year; the first and last years may be partly covered.`,
-      values: perYear,
-      labels: years.map((y) => y.slice(2)),
-      peak: argMax(perYear),
-    });
+    const total = dis.totalArtists.toLocaleString('en-US');
+    // The first month of the history is skipped: every artist is "first heard" then.
+    const firstMonth = [...new Set(aggs.map((a) => a.month))].sort()[0];
+    const counts = dis.byMonth.filter((m) => m.month !== firstMonth).map((m) => m.count);
+    const sortedCounts = [...counts].sort((a, b) => a - b);
+    const median = sortedCounts.length > 0 ? sortedCounts[Math.floor(sortedCounts.length / 2)] : 0;
+    const spike = dis.byMonth
+      .filter((m) => m.month !== firstMonth)
+      .reduce<{ month: string; count: number } | null>((b, m) => (!b || m.count > b.count ? m : b), null);
+    if (spike && spike.count >= 20 && spike.count >= 3 * median) {
+      beats.push({
+        id: 'habit-new',
+        label: 'New names',
+        title: `${monthYearOf(`${spike.month}-01`)}: ${spike.count} new names in one month`,
+        big: String(spike.count),
+        unit: 'artists heard for the first time that month',
+        caption: `That is the most in any month of your history. Across all years you have played ${total} artists; ${dis.keepers.toLocaleString('en-US')} came back in three months or more.`,
+        values: perYear,
+        labels: years.map((y) => y.slice(2)),
+        peak: Math.max(0, years.indexOf(spike.month.slice(0, 4))),
+      });
+    } else {
+      beats.push({
+        id: 'habit-new',
+        label: 'New names',
+        title: 'How often you find someone new',
+        big: total,
+        unit: 'artists in total',
+        caption: `${dis.oneMonthWonders.toLocaleString('en-US')} were heard in a single month only, and ${dis.keepers.toLocaleString('en-US')} in three months or more.`,
+        values: perYear,
+        labels: years.map((y) => y.slice(2)),
+        peak: argMax(perYear),
+      });
+    }
   }
   const ses = sessions(events);
   if (ses.count > 0) {
@@ -237,10 +261,10 @@ export function buildHabitBeats(events: PlayEvent[], aggs: PlayAggregate[] = [])
     beats.push({
       id: 'habit-loops',
       label: 'On loop',
-      title: 'Songs on loop',
+      title: 'Songs on repeat',
       big: lp.runs.toLocaleString('en-US'),
       unit: 'times one track played 5 or more times in a row',
-      caption: `Plays count as a run when each starts within 30 minutes of the last. The longest was ${lp.longest.count} plays of "${lp.longest.track}" by ${lp.longest.artist}, ending in ${lp.longest.endMonth}.${barYears ? ' Bars show runs by the year they began.' : ''}`,
+      caption: `Plays count as a run when each starts within 30 minutes of the last. The longest was ${lp.longest.count} plays of "${lp.longest.track}" by ${lp.longest.artist}, ending in ${lp.longest.endMonth}.${barYears ? '' : ''}`,
       values: barYears ? vals : [],
       labels: barYears ? lp.byYear.map((y) => y.year.slice(2)) : [],
       peak: barYears ? argMax(vals) : -1,
@@ -280,7 +304,7 @@ export function buildReturnedBeat(aggs: PlayAggregate[]): HabitBeat | null {
     title: 'Names you left behind',
     big: String(list.length),
     unit: 'artists gone quiet for a year or more',
-    caption: `Each had at least 120 minutes and no plays for 12 months or more. The biggest: ${top.join(', ')}. This is arithmetic on plays, not a statement about why.`,
+    caption: `Each had at least 120 minutes and no plays for 12 months or more. The biggest: ${top.join(', ')}.`,
     values: [],
     labels: [],
     peak: -1,
@@ -395,7 +419,11 @@ export function buildCountryMapBeat(
     title: 'Where your listening comes from',
     big: `${placedShare}%`,
     unit: 'of your minutes are placed on the map',
-    caption: `${countries.length} countries, ${sourcePhrase}, matched by artist name. A name match is not a verified identity, so a namesake can land in the wrong country. The other ${unplacedShare}% of minutes is not placed: no clear match, no country on record, or not in the file${offMapNote}. Country is the artist country MusicBrainz records, not a verified birthplace or nationality, and not where you listened.${partialNote}`,
+    // Name-match and licence caveats live on the "How this is counted" page.
+    caption:
+      sourceLabel === 'demo'
+        ? `${countries.length} countries, ${sourcePhrase}. The other ${unplacedShare}% of minutes has no country on record${offMapNote}. A country is where an artist is from, never where you listened.${partialNote}`
+        : `${countries.length} countries, ${sourcePhrase}, matched by artist name. The other ${unplacedShare}% of minutes is not placed: no clear match, or no country on record${offMapNote}. A country is where an artist is from, never where you listened.${partialNote}`,
     values: [],
     labels: [],
     peak: -1,
@@ -477,7 +505,7 @@ export function buildRiverBeat(aggs: PlayAggregate[]): HabitBeat | null {
     title: 'Your listening, one river',
     big: `${leaders} artists`,
     unit: `took turns as your most played, year after year`,
-    caption: `The river draws each year's top two artists: ${ranked.length} bands in all, of which ${leaders} were a year's most played (the labelled ones). Time runs from the top (${months[0]}) to now (${months[months.length - 1]}). Width is minutes per month, smoothed over three months. Together they are ${Math.round(share * 100)}% of all your minutes; everyone else is not drawn.${partialNote}`,
+    caption: `Each year's top two artists: ${ranked.length} bands, ${leaders} of them a year's most played (labelled). Time runs down from ${months[0]} to ${months[months.length - 1]}. Width is minutes per month, smoothed over three months. Together they are ${Math.round(share * 100)}% of your minutes; everyone else is not drawn.${partialNote}`,
     values: [],
     labels: [],
     peak: -1,

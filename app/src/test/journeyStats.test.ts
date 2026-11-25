@@ -218,7 +218,7 @@ describe('demo fixtures', () => {
   it('stagger first listens so the discoveries chart spreads', () => {
     const d = discoveries(buildDemoAggregates());
     expect(d.byMonth.length).toBeGreaterThan(3);
-    expect(d.totalArtists).toBe(9);
+    expect(d.totalArtists).toBeGreaterThan(90);
   });
   it('demo events carry skip/shuffle/platform flags for the deeper stats', () => {
     const events = buildDemoEvents();

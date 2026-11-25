@@ -8,6 +8,7 @@ import { ArtistsView, TracksView } from './ui/ListsView';
 import { GenresView } from './ui/GenresView';
 import { FlowView } from './ui/FlowView';
 import { GuideView } from './ui/GuideView';
+import { MethodView } from './ui/MethodView';
 import { JourneyView } from './ui/JourneyView';
 import { MapView } from './ui/MapView';
 import { PlayerBar } from './ui/PlayerBar';
@@ -27,7 +28,7 @@ const RANGES = [
 ];
 
 /** Four places to be. Story is the spine; Explore and Library hold the rest. */
-type SectionId = 'story' | 'explore' | 'library' | 'share' | 'guide';
+type SectionId = 'story' | 'explore' | 'library' | 'share' | 'about';
 const SECTIONS: Array<{ id: SectionId; label: string; views: Array<[View, string]> }> = [
   { id: 'story', label: 'Story', views: [['flow', 'Story']] },
   {
@@ -50,10 +51,23 @@ const SECTIONS: Array<{ id: SectionId; label: string; views: Array<[View, string
     ],
   },
   { id: 'share', label: 'Share', views: [['share', 'Share']] },
-  { id: 'guide', label: 'Guide', views: [['guide', 'Guide']] },
+  {
+    id: 'about',
+    label: 'About',
+    views: [
+      ['guide', 'Get your export'],
+      ['method', 'How this is counted'],
+    ],
+  },
 ];
 
 const sectionOf = (v: View) => SECTIONS.find((s) => s.views.some(([id]) => id === v)) ?? SECTIONS[0];
+
+/** Pages that read the month picked in the player bar. */
+const PLAYER_VIEWS: ReadonlySet<View> = new Set<View>(['journey', 'genres']);
+
+/** Pages that need no loaded data. */
+const STATIC_VIEWS: ReadonlySet<View> = new Set<View>(['guide', 'method']);
 
 /** Only these views change with the time-range chips; hide the chips elsewhere. */
 const RANGE_VIEWS: ReadonlySet<View> = new Set<View>([
@@ -69,12 +83,12 @@ const RANGE_VIEWS: ReadonlySet<View> = new Set<View>([
 const VIEW_HEADS: Partial<Record<View, { title: string; blurb: string }>> = {
   flow: {
     title: 'Your listening, as one story',
-    blurb:
-      'Scroll through the years: who led, who came back, and the quiet stretches - all counted from your plays.',
+    blurb: 'Scroll through the years: who led, who came back, and the quiet stretches.',
   },
   rediscover: {
     title: 'Rediscover your music',
-    blurb: 'Artists you loved and left, how your favourites changed year to year, and how much you explore.',
+    blurb:
+      'Artists you played a lot and left, your top artists year by year, and how much you explore. Covers all your years.',
   },
   journey: {
     title: 'Your listening, month by month',
@@ -82,7 +96,7 @@ const VIEW_HEADS: Partial<Record<View, { title: string; blurb: string }>> = {
   },
   story: {
     title: 'Your habits and discoveries',
-    blurb: 'Eras, discoveries, sessions and listening habits - computed from your plays, nothing invented.',
+    blurb: 'When you listen, how you start and skip, sessions, loops and new artists. Covers all your years.',
   },
   share: {
     title: 'Share a card',
@@ -113,6 +127,16 @@ export default function App() {
 
   const genres = useAppStore((s) => s.genres);
   const section = sectionOf(view);
+  // Sub-page chips for sections with more than one page (Explore, Library, About).
+  const sectionChips = section.views.length > 1 && (
+    <div className="tj-ranges" role="group" aria-label={`${section.label} views`}>
+      {section.views.map(([id, label]) => (
+        <Chip key={id} on={view === id} onClick={() => setView(id)}>
+          {label}
+        </Chip>
+      ))}
+    </div>
+  );
   const leadText = React.useMemo(() => {
     const ranged = RANGE_VIEWS.has(view)
       ? filterToMonths(aggregates, rangeMonthKeys(buildMonths(aggregates), range))
@@ -141,7 +165,7 @@ export default function App() {
         </div>
 
         <div className="tj-main">
-          {(source !== null || view === 'guide') && <SourceBar />}
+          {(source !== null || STATIC_VIEWS.has(view)) && <SourceBar />}
 
           {loading && (
             <LoadingState
@@ -170,22 +194,16 @@ export default function App() {
             />
           )}
 
+          {!loading && !error && STATIC_VIEWS.has(view) && sectionChips}
           {!loading && !error && view === 'guide' && <GuideView />}
+          {!loading && !error && view === 'method' && <MethodView />}
 
-          {!loading && !error && view !== 'guide' && source === null && <Onboarding />}
+          {!loading && !error && !STATIC_VIEWS.has(view) && source === null && <Onboarding />}
 
-          {!loading && !error && view !== 'guide' && source !== null && aggregates.length > 0 && (
+          {!loading && !error && !STATIC_VIEWS.has(view) && source !== null && aggregates.length > 0 && (
             <>
               <DataMeta />
-              {section.views.length > 1 && (
-                <div className="tj-ranges" role="group" aria-label={`${section.label} views`}>
-                  {section.views.map(([id, label]) => (
-                    <Chip key={id} on={view === id} onClick={() => setView(id)}>
-                      {label}
-                    </Chip>
-                  ))}
-                </div>
-              )}
+              {sectionChips}
               {RANGE_VIEWS.has(view) && (
                 <div className="tj-ranges" role="group" aria-label="Time range">
                   {RANGES.map((r) => (
@@ -202,13 +220,6 @@ export default function App() {
                 </header>
               )}
               {view !== 'flow' && leadText && <StoryLead key={view + range} text={leadText} />}
-              {view !== 'flow' && (
-                <p className="tj-scope">
-                  {RANGE_VIEWS.has(view)
-                    ? `Scope: follows the range above (${RANGES.find((r) => r.id === range)?.label ?? range})`
-                    : 'Scope: all time, whatever range is picked elsewhere'}
-                </p>
-              )}
               <div className="tj-viewbody" key={view}>
                 {view === 'flow' && <FlowView aggs={aggregates} events={events} />}
                 {view === 'rediscover' && <RediscoverView aggs={aggregates} />}
@@ -236,7 +247,9 @@ export default function App() {
         </div>
       </div>
 
-      {source !== null && aggregates.length > 0 && <PlayerBar months={months} aggs={aggregates} />}
+      {source !== null && aggregates.length > 0 && PLAYER_VIEWS.has(view) && (
+        <PlayerBar months={months} aggs={aggregates} />
+      )}
     </div>
   );
 }

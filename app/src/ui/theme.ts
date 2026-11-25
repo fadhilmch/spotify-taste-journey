@@ -23,5 +23,5 @@ export function artistHue(name: string): number {
 
 export function artistBackground(name: string): string {
   const hue = artistHue(name);
-  return `linear-gradient(135deg, hsl(${hue} 65% 55%), hsl(${(hue + 40) % 360} 70% 32%))`;
+  return `hsl(${hue} 28% 30%)`;
 }

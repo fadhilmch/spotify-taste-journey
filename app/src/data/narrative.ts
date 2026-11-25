@@ -127,6 +127,10 @@ export function buildNarrative(aggs: PlayAggregate[]): Narrative | null {
     if (q.hoursPerMonth <= median * 0.75 && lead / q.hours < 0.05) quietYear = q.year;
   }
 
+  // Busiest full year by hours per month.
+  const busiest =
+    fullYears.length > 0 ? [...fullYears].sort((a, b) => b.hoursPerMonth - a.hoursPerMonth)[0] : null;
+
   const beats: StoryBeat[] = [];
 
   const partialFirst = years[0].partial;
@@ -146,7 +150,7 @@ export function buildNarrative(aggs: PlayAggregate[]): Narrative | null {
       (partialBits.length > 0
         ? ` ${partialBits.join(' and ')}, so those years are compared per month, never as full-year totals.`
         : '') +
-      ' The bars show hours per month for each year. Everything that follows is counted from your plays.',
+      '',
     from: 0,
     to: years.length - 1,
     artists: [],
@@ -194,18 +198,37 @@ export function buildNarrative(aggs: PlayAggregate[]): Narrative | null {
         `No artist stood out: the leader, ${run.artist}, had ${fmtOne(hours)} h.`,
       );
     } else {
-      title =
-        kind === 'rise'
-          ? `${span}: a new name takes the lead`
-          : kind === 'return'
-            ? `${span}: ${run.artist} is back on top`
-            : `${span}: ${run.artist} leads`;
+      const one = run.from === run.to;
+      // Rounded down, so a share just under a title threshold never prints as the threshold itself.
+      const pctShare = Math.floor(share * 100);
+      if (kind === 'return') {
+        title =
+          share >= 0.1 ? `${span}: ${run.artist} is back on top` : `${span}: ${run.artist} edges back ahead`;
+      } else if (kind === 'rise') {
+        title =
+          share >= 0.25
+            ? `${span}: ${run.artist} arrives and takes over`
+            : share >= 0.1
+              ? `${span}: a new name takes the lead`
+              : `${span}: a new name edges ahead`;
+      } else {
+        title =
+          share >= 0.25
+            ? `${span}: ${run.artist} takes over`
+            : share >= 0.1
+              ? `${span}: ${run.artist} leads`
+              : `${span}: ${one ? 'a wide-open year' : 'wide-open years'}`;
+      }
       if (recentlyHeard) bits.push(`${run.artist} was first played in ${monthName(heardKey)}.`);
-      bits.push(
-        `${run.artist} led with ${fmtOne(hours)} h, ${Math.round(share * 100)}% of ${
-          run.from === run.to ? 'the year' : 'those years'
-        }.`,
-      );
+      if (share < 0.1) {
+        bits.push(
+          `No single name dominated. ${run.artist} edged ahead with ${fmtOne(hours)} h, ${pctShare}% of ${one ? 'the year' : 'those years'}.`,
+        );
+      } else {
+        bits.push(
+          `${run.artist} led with ${fmtOne(hours)} h, ${pctShare}% of ${one ? 'the year' : 'those years'}.`,
+        );
+      }
       if (prev && !quiet) {
         const prevPeak = Math.max(
           ...yearList.slice(prev.from, prev.to + 1).map((y) => yearHours(y, prev.artist)),
@@ -227,6 +250,15 @@ export function buildNarrative(aggs: PlayAggregate[]): Narrative | null {
           `It had ${fmtOne(dip)} h in ${years[run.from - 1].year}${gap > 1 ? ` and was away from the top for ${gap} years` : ''}.`,
         );
       }
+    }
+    if (busiest && !quiet) {
+      const bi = years.indexOf(busiest);
+      if (bi >= run.from && bi <= run.to)
+        bits.push(
+          run.from === run.to
+            ? `Your busiest year: ${fmtOne(busiest.hoursPerMonth)} h a month.`
+            : `${busiest.year} was your busiest year: ${fmtOne(busiest.hoursPerMonth)} h a month.`,
+        );
     }
     const partialYears = years.slice(run.from, run.to + 1).filter((y) => y.partial);
     for (const py of partialYears) {

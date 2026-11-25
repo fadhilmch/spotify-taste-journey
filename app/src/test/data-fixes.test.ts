@@ -138,8 +138,9 @@ describe('buildRiverBeat linear yearly ranking', () => {
         .sort(),
     );
     expect(b.big).toBe(`${b.river!.leaders.length} artists`);
-    expect(b.caption).toContain(`${b.river!.bands.length} bands in all`);
-    expect(b.caption).toContain(`of which ${b.river!.leaders.length} were a year's most played`);
+    expect(b.caption).toContain(
+      `${b.river!.bands.length} bands, ${b.river!.leaders.length} of them a year's most played`,
+    );
   });
 });
 
