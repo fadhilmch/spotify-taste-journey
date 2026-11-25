@@ -83,8 +83,11 @@ function ArtistPanel({ aggs, artist }: { aggs: PlayAggregate[]; artist: string }
 export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAggregate[] }) {
   const range = useAppStore((s) => s.range);
   const source = useAppStore((s) => s.source);
-  const ranged = filterToMonths(aggs, rangeMonthKeys(months, range));
-  const artists = topArtists(ranged, 12);
+  const ranged = React.useMemo(
+    () => filterToMonths(aggs, rangeMonthKeys(months, range)),
+    [aggs, months, range],
+  );
+  const artists = React.useMemo(() => topArtists(ranged, 12), [ranged]);
   // Years each artist was heard, over all history (not just the range), counted from plays.
   const span = React.useMemo(() => {
     const m = new Map<string, [string, string]>();
@@ -151,7 +154,8 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
   React.useEffect(() => {
     if (libraryArtist) setLibraryArtist(null);
   }, [libraryArtist, setLibraryArtist]);
-  const rangeLabel = { '4w': '4 weeks', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
+  const rangeLabel =
+    { '4w': 'Last month', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
 
   return (
     <Card
@@ -197,15 +201,19 @@ export function ArtistsView({ months, aggs }: { months: MonthBucket[]; aggs: Pla
 export function TracksView({ months, aggs }: { months: MonthBucket[]; aggs: PlayAggregate[] }) {
   const range = useAppStore((s) => s.range);
   const source = useAppStore((s) => s.source);
-  const ranged = filterToMonths(aggs, rangeMonthKeys(months, range));
-  const tracks = topTracks(ranged, 10);
+  const ranged = React.useMemo(
+    () => filterToMonths(aggs, rangeMonthKeys(months, range)),
+    [aggs, months, range],
+  );
+  const tracks = React.useMemo(() => topTracks(ranged, 10), [ranged]);
   const setView = useAppStore((st) => st.setView);
   const setLibraryArtist = useAppStore((st) => st.setLibraryArtist);
   const openArtist = (name: string) => {
     setLibraryArtist(name);
     setView('artists');
   };
-  const rangeLabel = { '4w': '4 weeks', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
+  const rangeLabel =
+    { '4w': 'Last month', '6m': '6 months', '1y': '1 year', all: 'All time' }[range] ?? range;
 
   return (
     <Card

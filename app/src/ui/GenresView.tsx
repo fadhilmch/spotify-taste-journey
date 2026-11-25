@@ -34,8 +34,8 @@ export function GenresView({ months, aggs }: { months: MonthBucket[]; aggs: Play
   const setPlaying = useAppStore((s) => s.setPlaying);
   const [open, setOpen] = React.useState<string | null>(null);
 
-  const rangeKeys = rangeMonthKeys(months, range);
-  const rangedMonths = months.filter((m) => rangeKeys.has(m.key));
+  const rangeKeys = React.useMemo(() => rangeMonthKeys(months, range), [months, range]);
+  const rangedMonths = React.useMemo(() => months.filter((m) => rangeKeys.has(m.key)), [months, rangeKeys]);
   const rangedAggs = React.useMemo(() => filterToMonths(aggs, rangeKeys), [aggs, rangeKeys]);
   const gated = source === 'export' && matchState === 'idle';
 
